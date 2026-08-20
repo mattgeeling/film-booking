@@ -4,6 +4,7 @@
   const PX_PER_HOUR = 60;
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const STATUS_LABELS = { pencil: '✎ Pencil', confirmed: '✓ Confirmed' };
+  const UNAVAILABLE_PERIOD_LABELS = { all_day: 'All day', am: 'AM', pm: 'PM' };
   const CHECKLIST_ITEMS = [
     { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet' },
     { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment' },
@@ -18,7 +19,12 @@
     people: [],
     clients: [],
     blockedDaysByDate: {},
+    unavailableByDate: {},
     kitUsagePageMonth: null,
+    currentView: 'week',
+    monthStr: null,
+    monthBookings: [],
+    filters: { personId: '', clientId: '', kit: '' },
     editingId: null,
   };
 
@@ -72,6 +78,17 @@
     syncResults: document.getElementById('syncResults'),
     conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
+    viewMonthBtn: document.getElementById('viewMonthBtn'),
+    monthView: document.getElementById('monthView'),
+    prevMonth: document.getElementById('prevMonth'),
+    thisMonthBtn: document.getElementById('thisMonthBtn'),
+    nextMonth: document.getElementById('nextMonth'),
+    monthLabel: document.getElementById('monthLabel'),
+    monthGrid: document.getElementById('monthGrid'),
+    filterPerson: document.getElementById('filterPerson'),
+    filterClient: document.getElementById('filterClient'),
+    filterKit: document.getElementById('filterKit'),
+    clearFiltersBtn: document.getElementById('clearFiltersBtn'),
     viewPeopleBtn: document.getElementById('viewPeopleBtn'),
     weekControls: document.getElementById('weekControls'),
     weekLegend: document.getElementById('weekLegend'),
@@ -89,6 +106,7 @@
     clientLogo: document.getElementById('clientLogo'),
     clientFormError: document.getElementById('clientFormError'),
     clientsTableBody: document.getElementById('clientsTableBody'),
+    kitUsagePanel: document.getElementById('kitUsagePanel'),
     kitUsageTitle: document.getElementById('kitUsageTitle'),
     kitUsageList: document.getElementById('kitUsageList'),
     viewKitUsageBtn: document.getElementById('viewKitUsageBtn'),
@@ -197,6 +215,9 @@
         header.appendChild(reasonEl);
       }
 
+      const unavailBadge = buildUnavailableBadge(dIso);
+      if (unavailBadge) header.appendChild(unavailBadge);
+
       el.weekGrid.appendChild(header);
     }
 
@@ -288,7 +309,7 @@
     const columns = el.weekGrid.querySelectorAll('.day-column');
     columns.forEach((c) => { c.querySelectorAll('.booking-block').forEach((b) => b.remove()); });
 
-    for (const booking of state.bookings) {
+    for (const booking of applyFilters(state.bookings)) {
       const start = new Date(booking.start_datetime.replace(' ', 'T'));
       const end = new Date(booking.end_datetime.replace(' ', 'T'));
       const dayIndex = dayIndexFor(start);
@@ -550,6 +571,111 @@
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }
 
+  function applyFilters(bookings) {
+    return bookings.filter((b) => {
+      if (state.filters.personId && !b.attendees.some((a) => String(a.id) === state.filters.personId)) return false;
+      if (state.filters.clientId && String(b.client_id || '') !== state.filters.clientId) return false;
+      if (state.filters.kit && b.kit_source !== state.filters.kit) return false;
+      return true;
+    });
+  }
+
+  async function loadMonth() {
+    const monthStr = state.monthStr || currentMonthStr(new Date());
+    state.monthStr = monthStr;
+    const monthDate = new Date(monthStr + '-01T00:00:00');
+    el.monthLabel.textContent = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    const data = await apiGet(`api/bookings_month_list.php?month=${monthStr}`);
+    state.monthBookings = data.bookings;
+    renderMonthGrid(monthDate);
+  }
+
+  function shiftMonth(delta) {
+    const [y, m] = (state.monthStr || currentMonthStr(new Date())).split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    state.monthStr = currentMonthStr(d);
+    loadMonth();
+  }
+
+  function renderMonthGrid(monthDate) {
+    el.monthGrid.innerHTML = '';
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const todayIso = isoDate(new Date());
+
+    for (const name of DAY_NAMES) {
+      const header = document.createElement('div');
+      header.className = 'month-day-header';
+      header.textContent = name;
+      el.monthGrid.appendChild(header);
+    }
+
+    const bookingsByDate = {};
+    for (const booking of applyFilters(state.monthBookings)) {
+      const dateIso = booking.start_datetime.slice(0, 10);
+      (bookingsByDate[dateIso] = bookingsByDate[dateIso] || []).push(booking);
+    }
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(year, month, day);
+      const weekday = dateObj.getDay(); // 0=Sun..6=Sat
+      if (weekday >= 1 && weekday <= 5) cells.push(dateObj);
+    }
+    if (cells.length) {
+      const startCol = cells[0].getDay() - 1; // Mon=0..Fri=4
+      for (let i = 0; i < startCol; i++) cells.unshift(null);
+      while (cells.length % 5 !== 0) cells.push(null);
+    }
+
+    for (const dateObj of cells) {
+      const cell = document.createElement('div');
+      if (!dateObj) {
+        cell.className = 'month-cell is-empty';
+        el.monthGrid.appendChild(cell);
+        continue;
+      }
+      const dateIso = isoDate(dateObj);
+      const blocked = state.blockedDaysByDate[dateIso];
+      cell.className = 'month-cell' + (dateIso === todayIso ? ' is-today' : '') + (blocked ? ' is-blocked' : '');
+      cell.addEventListener('click', (e) => {
+        if (e.target !== cell) return;
+        if (blocked) {
+          alert(`This day is blocked for bookings${blocked.reason ? ': ' + blocked.reason : ''}.`);
+          return;
+        }
+        openAddModal(dateObj);
+      });
+
+      const dateLabel = document.createElement('div');
+      dateLabel.className = 'month-cell-date';
+      dateLabel.textContent = String(dateObj.getDate());
+      cell.appendChild(dateLabel);
+
+      if (blocked) {
+        const reasonEl = document.createElement('div');
+        reasonEl.className = 'day-blocked-reason';
+        reasonEl.textContent = blocked.reason || 'Blocked';
+        cell.appendChild(reasonEl);
+      }
+
+      const unavailBadge = buildUnavailableBadge(dateIso);
+      if (unavailBadge) cell.appendChild(unavailBadge);
+
+      for (const booking of (bookingsByDate[dateIso] || [])) {
+        const pill = document.createElement('div');
+        pill.className = `month-pill status-${booking.status}`;
+        pill.textContent = booking.title;
+        pill.title = booking.title;
+        pill.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(booking); });
+        cell.appendChild(pill);
+      }
+
+      el.monthGrid.appendChild(cell);
+    }
+  }
+
   async function loadKitUsagePage() {
     const monthStr = state.kitUsagePageMonth || currentMonthStr(new Date());
     state.kitUsagePageMonth = monthStr;
@@ -621,11 +747,13 @@
   async function loadPeople() {
     state.people = await apiGet('api/people_list.php');
     el.fieldAttendees.innerHTML = '';
+    el.filterPerson.innerHTML = '<option value="">All people</option>';
     for (const p of state.people) {
       const opt = document.createElement('option');
       opt.value = String(p.id);
       opt.textContent = p.name;
       el.fieldAttendees.appendChild(opt);
+      el.filterPerson.appendChild(opt.cloneNode(true));
     }
     if (state.bookings.length || state.people.length) updateWeekPeopleSummary();
   }
@@ -633,6 +761,7 @@
   async function loadClients() {
     state.clients = await apiGet('api/clients_list.php');
     el.fieldClient.innerHTML = '';
+    el.filterClient.innerHTML = '<option value="">All clients</option>';
     const noneOpt = document.createElement('option');
     noneOpt.value = '';
     noneOpt.textContent = '— None —';
@@ -642,7 +771,41 @@
       opt.value = String(c.id);
       opt.textContent = c.name;
       el.fieldClient.appendChild(opt);
+      el.filterClient.appendChild(opt.cloneNode(true));
     }
+  }
+
+  function onFilterChange() {
+    state.filters.personId = el.filterPerson.value;
+    state.filters.clientId = el.filterClient.value;
+    state.filters.kit = el.filterKit.value;
+    const active = !!(state.filters.personId || state.filters.clientId || state.filters.kit);
+    el.clearFiltersBtn.classList.toggle('hidden', !active);
+    if (state.currentView === 'month') {
+      renderMonthGrid(new Date((state.monthStr || currentMonthStr(new Date())) + '-01T00:00:00'));
+    } else {
+      renderBookings();
+      updateWeekTally();
+    }
+  }
+
+  function clearFilters() {
+    state.filters = { personId: '', clientId: '', kit: '' };
+    el.filterPerson.value = '';
+    el.filterClient.value = '';
+    el.filterKit.value = '';
+    onFilterChange();
+  }
+
+  async function refreshBookings() {
+    await loadWeek();
+    if (state.currentView === 'month') {
+      await loadMonth();
+    }
+  }
+
+  function findLoadedBooking(id) {
+    return state.bookings.find((b) => b.id === id) || state.monthBookings.find((b) => b.id === id);
   }
 
   async function loadBlockedDays() {
@@ -650,6 +813,14 @@
     state.blockedDaysByDate = {};
     for (const row of rows) {
       state.blockedDaysByDate[row.day] = row;
+    }
+  }
+
+  async function loadUnavailability() {
+    const rows = await apiGet('api/person_unavailable_list.php');
+    state.unavailableByDate = {};
+    for (const row of rows) {
+      (state.unavailableByDate[row.day] = state.unavailableByDate[row.day] || []).push(row);
     }
   }
 
@@ -670,7 +841,7 @@
       }
     }
     await loadBlockedDays();
-    await loadWeek();
+    await refreshBookings();
   }
 
   async function loadBlockedDaysTable() {
@@ -705,7 +876,7 @@
         await apiPost(`api/blocked_days_delete.php?id=${bd.id}`);
         await loadBlockedDays();
         await loadBlockedDaysTable();
-        await loadWeek();
+        await refreshBookings();
       });
       actionsCell.appendChild(removeBtn);
 
@@ -736,7 +907,7 @@
       el.blockedDayForm.reset();
       await loadBlockedDays();
       await loadBlockedDaysTable();
-      await loadWeek();
+      await refreshBookings();
     } catch (err) {
       showBlockedDayFormError(err.message);
     }
@@ -808,24 +979,49 @@
     } catch (err) {
       return; // silent — this is a convenience check, not critical path
     }
-    if (!data.conflicts.length) {
+    const unavailable = (state.unavailableByDate[el.fieldDate.value] || [])
+      .filter((u) => attendeeIds.includes(u.person_id) &&
+        unavailabilityOverlapsTime(u.period, el.fieldStart.value, el.fieldEnd.value));
+
+    if (!data.conflicts.length && !unavailable.length) {
       el.conflictWarning.classList.add('hidden');
       return;
     }
     el.conflictWarning.innerHTML = '';
-    const title = document.createElement('span');
-    title.className = 'cw-title';
-    title.textContent = `Possible double-booking (${data.conflicts.length}):`;
-    el.conflictWarning.appendChild(title);
-    for (const c of data.conflicts) {
-      const start = new Date(c.start_datetime.replace(' ', 'T'));
-      const end = new Date(c.end_datetime.replace(' ', 'T'));
-      const item = document.createElement('span');
-      item.className = 'cw-item';
-      item.textContent = `${c.person_name} is already on "${c.booking_title}" ${formatTime(start)}–${formatTime(end)}`;
-      el.conflictWarning.appendChild(item);
+    if (data.conflicts.length) {
+      const title = document.createElement('span');
+      title.className = 'cw-title';
+      title.textContent = `Possible double-booking (${data.conflicts.length}):`;
+      el.conflictWarning.appendChild(title);
+      for (const c of data.conflicts) {
+        const start = new Date(c.start_datetime.replace(' ', 'T'));
+        const end = new Date(c.end_datetime.replace(' ', 'T'));
+        const item = document.createElement('span');
+        item.className = 'cw-item';
+        item.textContent = `${c.person_name} is already on "${c.booking_title}" ${formatTime(start)}–${formatTime(end)}`;
+        el.conflictWarning.appendChild(item);
+      }
+    }
+    if (unavailable.length) {
+      const title = document.createElement('span');
+      title.className = 'cw-title';
+      title.textContent = `Marked unavailable (${unavailable.length}):`;
+      el.conflictWarning.appendChild(title);
+      const periodPhrase = { all_day: 'this day', am: 'this morning', pm: 'this afternoon' };
+      for (const u of unavailable) {
+        const item = document.createElement('span');
+        item.className = 'cw-item';
+        item.textContent = `${u.person_name} is unavailable ${periodPhrase[u.period]}${u.reason ? ': ' + u.reason : ''}`;
+        el.conflictWarning.appendChild(item);
+      }
     }
     el.conflictWarning.classList.remove('hidden');
+  }
+
+  function unavailabilityOverlapsTime(period, startTime, endTime) {
+    if (period === 'all_day') return true;
+    if (period === 'am') return startTime < '12:00';
+    return endTime > '12:00';
   }
 
   function openAddModal(date) {
@@ -938,7 +1134,7 @@
         data = await apiPost('api/bookings_create.php', payload);
       }
       closeModal();
-      await loadWeek();
+      await refreshBookings();
       const failures = (data.sync_results || []).filter((r) => r.status === 'error');
       if (failures.length) {
         alert('Booking saved, but some calendar updates failed:\n' +
@@ -970,10 +1166,15 @@
     el.confirmBookingBtn.disabled = true;
     try {
       const data = await apiPost(`api/bookings_confirm.php?id=${state.editingId}`);
-      await loadWeek();
-      const updated = state.bookings.find((b) => b.id === state.editingId);
+      await refreshBookings();
+      const updated = findLoadedBooking(state.editingId);
       if (updated) openEditModal(updated);
       showSyncResults(data.results);
+      const emailFailures = (data.email_results || []).filter((r) => r.status === 'error');
+      if (emailFailures.length) {
+        alert('Booking confirmed, but some confirmation emails failed to send:\n' +
+          emailFailures.map((r) => `${r.person}: ${r.error}`).join('\n'));
+      }
     } catch (err) {
       showFormError(err.message);
     } finally {
@@ -986,8 +1187,8 @@
     el.unconfirmBookingBtn.disabled = true;
     try {
       const data = await apiPost(`api/bookings_unconfirm.php?id=${state.editingId}`);
-      await loadWeek();
-      const updated = state.bookings.find((b) => b.id === state.editingId);
+      await refreshBookings();
+      const updated = findLoadedBooking(state.editingId);
       if (updated) openEditModal(updated);
       showSyncResults(data.results);
     } catch (err) {
@@ -1003,35 +1204,41 @@
     try {
       await apiPost(`api/bookings_cancel.php?id=${state.editingId}`);
       closeModal();
-      await loadWeek();
+      await refreshBookings();
     } catch (err) {
       showFormError(err.message);
     }
   }
 
   function switchView(view) {
+    state.currentView = view;
     const isWeek = view === 'week';
+    const isMonth = view === 'month';
     const isPeople = view === 'people';
     const isClients = view === 'clients';
     const isKitUsage = view === 'kitUsage';
     const isBlockedDays = view === 'blockedDays';
     el.viewWeekBtn.classList.toggle('active', isWeek);
+    el.viewMonthBtn.classList.toggle('active', isMonth);
     el.viewPeopleBtn.classList.toggle('active', isPeople);
     el.viewClientsBtn.classList.toggle('active', isClients);
     el.viewKitUsageBtn.classList.toggle('active', isKitUsage);
     el.viewBlockedDaysBtn.classList.toggle('active', isBlockedDays);
     el.weekBody.classList.toggle('hidden', !isWeek);
     el.weekControls.classList.toggle('hidden', !isWeek);
-    el.weekLegend.classList.toggle('hidden', !isWeek);
-    el.addBookingBtn.classList.toggle('hidden', !isWeek);
+    el.weekLegend.classList.toggle('hidden', !isWeek && !isMonth);
+    el.addBookingBtn.classList.toggle('hidden', !isWeek && !isMonth);
+    el.monthView.classList.toggle('hidden', !isMonth);
     el.peopleView.classList.toggle('hidden', !isPeople);
     el.clientsView.classList.toggle('hidden', !isClients);
     el.kitUsagePageView.classList.toggle('hidden', !isKitUsage);
     el.blockedDaysView.classList.toggle('hidden', !isBlockedDays);
+    el.kitUsagePanel.classList.toggle('hidden', !isWeek);
     if (isPeople) loadPeopleTable();
     if (isClients) loadClientsTable();
     if (isKitUsage) loadKitUsagePage();
     if (isBlockedDays) loadBlockedDaysTable();
+    if (isMonth) loadMonth();
   }
 
   function hidePersonFormError() {
@@ -1048,6 +1255,115 @@
     el.peopleTableBody.innerHTML = '';
     for (const person of people) {
       el.peopleTableBody.appendChild(buildPersonRow(person));
+      el.peopleTableBody.appendChild(buildUnavailablePanelRow(person));
+    }
+  }
+
+  function buildUnavailablePanelRow(person) {
+    const tr = document.createElement('tr');
+    tr.className = 'unavailable-panel-row hidden';
+
+    const td = document.createElement('td');
+    td.colSpan = 5;
+
+    const panel = document.createElement('div');
+    panel.className = 'unavailable-panel';
+
+    const list = document.createElement('div');
+    list.className = 'unavailable-list';
+    panel.appendChild(list);
+
+    const form = document.createElement('form');
+    form.className = 'unavailable-form';
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.required = true;
+
+    const periodSelect = document.createElement('select');
+    for (const [value, label] of [['all_day', 'All day'], ['am', 'Morning (AM)'], ['pm', 'Afternoon (PM)']]) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      periodSelect.appendChild(opt);
+    }
+
+    const reasonInput = document.createElement('input');
+    reasonInput.type = 'text';
+    reasonInput.placeholder = 'Reason (optional)';
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'submit';
+    addBtn.className = 'primary';
+    addBtn.textContent = `Mark ${person.name.split(' ')[0]} unavailable`;
+
+    form.appendChild(dateInput);
+    form.appendChild(periodSelect);
+    form.appendChild(reasonInput);
+    form.appendChild(addBtn);
+
+    const errorEl = document.createElement('p');
+    errorEl.className = 'form-error hidden';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.classList.add('hidden');
+      try {
+        await apiPost('api/person_unavailable_create.php', {
+          person_id: person.id,
+          day: dateInput.value,
+          period: periodSelect.value,
+          reason: reasonInput.value.trim(),
+        });
+        dateInput.value = '';
+        periodSelect.value = 'all_day';
+        reasonInput.value = '';
+        await refreshUnavailablePanel(list, person);
+        await loadUnavailability();
+        await refreshBookings();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    panel.appendChild(form);
+    panel.appendChild(errorEl);
+    td.appendChild(panel);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  async function refreshUnavailablePanel(list, person) {
+    list.innerHTML = '';
+    const rows = await apiGet(`api/person_unavailable_list.php?person_id=${person.id}`);
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'muted-note';
+      empty.textContent = 'No unavailable days recorded.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const r of rows) {
+      const item = document.createElement('div');
+      item.className = 'unavailable-item';
+      const label = document.createElement('span');
+      const d = new Date(r.day + 'T00:00:00');
+      const periodSuffix = r.period !== 'all_day' ? ` (${UNAVAILABLE_PERIOD_LABELS[r.period]})` : '';
+      label.textContent = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
+        periodSuffix + (r.reason ? ` — ${r.reason}` : '');
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', async () => {
+        await apiPost(`api/person_unavailable_delete.php?id=${r.id}`);
+        await refreshUnavailablePanel(list, person);
+        await loadUnavailability();
+        await refreshBookings();
+      });
+      item.appendChild(label);
+      item.appendChild(removeBtn);
+      list.appendChild(item);
     }
   }
 
@@ -1057,6 +1373,23 @@
     el.style.backgroundColor = colorForPerson(personId, name);
     el.textContent = initialsForName(name);
     return el;
+  }
+
+  function buildUnavailableBadge(dateIso) {
+    const unavailable = state.unavailableByDate[dateIso] || [];
+    if (!unavailable.length) return null;
+    const badge = document.createElement('div');
+    badge.className = 'day-unavailable-row';
+    const names = unavailable.map((u) => {
+      const first = u.person_name.split(' ')[0];
+      return u.period !== 'all_day' ? `${first} (${UNAVAILABLE_PERIOD_LABELS[u.period]})` : first;
+    }).join(', ');
+    badge.textContent = `⛔ ${names} unavailable`;
+    badge.title = unavailable.map((u) => {
+      const periodSuffix = u.period !== 'all_day' ? ` (${UNAVAILABLE_PERIOD_LABELS[u.period]})` : '';
+      return `${u.person_name}${periodSuffix}${u.reason ? ': ' + u.reason : ''}`;
+    }).join('\n');
+    return badge;
   }
 
   function buildPersonRow(person) {
@@ -1097,8 +1430,20 @@
       await loadPersonColors();
     });
 
+    const unavailBtn = document.createElement('button');
+    unavailBtn.type = 'button';
+    unavailBtn.textContent = 'Unavailable days';
+    unavailBtn.addEventListener('click', () => {
+      const panelRow = row.nextElementSibling;
+      const nowVisible = panelRow.classList.toggle('hidden') === false;
+      if (nowVisible) {
+        refreshUnavailablePanel(panelRow.querySelector('.unavailable-list'), person);
+      }
+    });
+
     actionsCell.appendChild(editBtn);
     actionsCell.appendChild(toggleBtn);
+    actionsCell.appendChild(unavailBtn);
 
     row.appendChild(nameCell);
     row.appendChild(roleCell);
@@ -1338,6 +1683,17 @@
   }
 
   el.viewWeekBtn.addEventListener('click', () => switchView('week'));
+  el.viewMonthBtn.addEventListener('click', () => switchView('month'));
+  el.prevMonth.addEventListener('click', () => shiftMonth(-1));
+  el.nextMonth.addEventListener('click', () => shiftMonth(1));
+  el.thisMonthBtn.addEventListener('click', () => {
+    state.monthStr = currentMonthStr(new Date());
+    loadMonth();
+  });
+  el.filterPerson.addEventListener('change', onFilterChange);
+  el.filterClient.addEventListener('change', onFilterChange);
+  el.filterKit.addEventListener('change', onFilterChange);
+  el.clearFiltersBtn.addEventListener('click', clearFilters);
   el.viewPeopleBtn.addEventListener('click', () => switchView('people'));
   el.viewClientsBtn.addEventListener('click', () => switchView('clients'));
   el.viewKitUsageBtn.addEventListener('click', () => switchView('kitUsage'));
@@ -1370,6 +1726,7 @@
   el.bookingForm.addEventListener('submit', onFormSubmit);
   el.deleteBookingBtn.addEventListener('click', onDeleteClick);
   el.confirmBookingBtn.addEventListener('click', onConfirmClick);
+  el.unconfirmBookingBtn.addEventListener('click', onUnconfirmClick);
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -1408,6 +1765,7 @@
     await loadPersonColors();
     await loadClients();
     await loadBlockedDays();
+    await loadUnavailability();
     await loadWeek();
   }
 

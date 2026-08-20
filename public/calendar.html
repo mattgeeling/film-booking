@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Film Plan</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <img class="logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+      <h1>Film Plan</h1>
+      <p>Sign in with your Fuzzy Duck Google account to continue.</p>
+      <div id="googleSignInBtn"></div>
+      <p id="authError" class="form-error hidden"></p>
+    </div>
+  </div>
+
+  <div id="appRoot" class="hidden">
+    <header class="topbar">
+      <div class="topbar-row">
+        <a class="brand" href="index.html">
+          <img class="logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+          <h1>Film Plan</h1>
+        </a>
+        <nav class="view-nav">
+          <button id="viewWeekBtn" type="button" class="active">Week</button>
+          <button id="viewMonthBtn" type="button">Month</button>
+          <button id="viewPeopleBtn" type="button">People</button>
+          <button id="viewClientsBtn" type="button">Clients</button>
+          <button id="viewKitUsageBtn" type="button">Kit Usage</button>
+          <button id="viewBlockedDaysBtn" type="button">Blocked Days</button>
+        </nav>
+        <div id="weekControls" class="week-nav">
+          <button id="prevWeek" type="button" aria-label="Previous week">&larr;</button>
+          <button id="todayBtn" type="button">Today</button>
+          <button id="nextWeek" type="button" aria-label="Next week">&rarr;</button>
+          <span id="weekLabel" class="week-label"></span>
+        </div>
+        <div id="weekLegend" class="legend">
+          <span class="legend-item status-pencil">&#9998; Pencil</span>
+          <span class="legend-item status-confirmed">&#10003; Confirmed</span>
+        </div>
+        <button id="addBookingBtn" type="button" class="primary">+ Add booking</button>
+        <span id="currentUserLabel" class="current-user"></span>
+        <button id="signOutBtn" type="button">Sign out</button>
+      </div>
+      <div class="topbar-sub">
+        <span id="weekTally" class="week-tally"></span>
+        <div id="weekFilters" class="week-filters">
+          <select id="filterPerson">
+            <option value="">All people</option>
+          </select>
+          <select id="filterClient">
+            <option value="">All clients</option>
+          </select>
+          <select id="filterKit">
+            <option value="">All kit</option>
+            <option value="fuzzy_duck">Fuzzy Duck kit</option>
+            <option value="mark">Mark's kit</option>
+            <option value="tom">Tom's kit</option>
+          </select>
+          <button id="clearFiltersBtn" type="button" class="hidden">Clear filters</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="weekBody" class="week-body">
+        <aside id="peopleSummary" class="people-summary">
+          <h3>Shoot days</h3>
+          <div id="peopleSummaryList"></div>
+        </aside>
+        <div id="weekGrid" class="week-grid"></div>
+      </div>
+
+      <section id="monthView" class="month-view hidden">
+        <div class="week-nav">
+          <button id="prevMonth" type="button" aria-label="Previous month">&larr;</button>
+          <button id="thisMonthBtn" type="button">This month</button>
+          <button id="nextMonth" type="button" aria-label="Next month">&rarr;</button>
+          <span id="monthLabel" class="week-label"></span>
+        </div>
+        <div id="monthGrid" class="month-grid"></div>
+      </section>
+
+    <section id="peopleView" class="people-view hidden">
+      <h2>Bookable people</h2>
+      <form id="personForm" class="person-form">
+        <input type="text" id="personName" placeholder="Name" required>
+        <input type="text" id="personRole" placeholder="Job title">
+        <input type="email" id="personEmail" placeholder="Email" required>
+        <button type="submit" class="primary">Add person</button>
+      </form>
+      <p id="personFormError" class="form-error hidden"></p>
+      <table class="people-table">
+        <thead>
+          <tr><th>Name</th><th>Job title</th><th>Email</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="peopleTableBody"></tbody>
+      </table>
+    </section>
+
+    <section id="clientsView" class="people-view hidden">
+      <h2>Clients</h2>
+      <form id="clientForm" class="person-form">
+        <input type="text" id="clientName" placeholder="Client name" required>
+        <input type="file" id="clientLogo" accept="image/png,image/jpeg,image/gif,image/webp">
+        <button type="submit" class="primary">Add client</button>
+      </form>
+      <p id="clientFormError" class="form-error hidden"></p>
+      <table class="people-table">
+        <thead>
+          <tr><th>Logo</th><th>Name</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="clientsTableBody"></tbody>
+      </table>
+    </section>
+
+    <section id="kitUsagePageView" class="people-view hidden">
+      <h2>Kit usage</h2>
+      <div class="week-nav">
+        <button id="kitUsagePrevMonth" type="button" aria-label="Previous month">&larr;</button>
+        <button id="kitUsageThisMonth" type="button">This month</button>
+        <button id="kitUsageNextMonth" type="button" aria-label="Next month">&rarr;</button>
+        <span id="kitUsagePageMonthLabel" class="week-label"></span>
+      </div>
+      <div id="kitUsagePageSummary" class="kit-usage-page-summary"></div>
+      <table class="people-table">
+        <thead>
+          <tr><th>Date</th><th>Booking</th><th>Kit</th><th>Status</th></tr>
+        </thead>
+        <tbody id="kitUsagePageTableBody"></tbody>
+      </table>
+    </section>
+
+    <section id="blockedDaysView" class="people-view hidden">
+      <h2>Blocked days</h2>
+      <form id="blockedDayForm" class="person-form">
+        <input type="date" id="blockedDayDate" required>
+        <input type="text" id="blockedDayReason" placeholder="Reason (e.g. PAT testing, kit in office)">
+        <button type="submit" class="primary">Block day</button>
+      </form>
+      <p id="blockedDayFormError" class="form-error hidden"></p>
+      <table class="people-table">
+        <thead>
+          <tr><th>Date</th><th>Reason</th><th></th></tr>
+        </thead>
+        <tbody id="blockedDaysTableBody"></tbody>
+      </table>
+    </section>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop hidden">
+    <form id="bookingForm" class="modal modal-wide">
+      <h2 id="modalTitle">New booking</h2>
+
+      <div class="modal-columns">
+        <div class="modal-col">
+          <label>
+            Title
+            <input type="text" id="fieldTitle" required>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Date
+              <input type="date" id="fieldDate" required>
+            </label>
+            <label>
+              Start
+              <input type="time" id="fieldStart" required>
+            </label>
+            <label>
+              End
+              <input type="time" id="fieldEnd" required>
+            </label>
+          </div>
+
+          <label>
+            Location
+            <input type="text" id="fieldLocation">
+          </label>
+          <a id="fieldLocationMapsLink" href="#" target="_blank" rel="noopener" class="inline-link hidden">&#128205; Open in Google Maps</a>
+
+          <label>
+            What3Words
+            <input type="text" id="fieldWhat3Words" placeholder="///example.words.here">
+          </label>
+          <a id="fieldWhat3WordsLink" href="#" target="_blank" rel="noopener" class="inline-link hidden">&#128205; Open in what3words</a>
+
+          <label>
+            Client
+            <select id="fieldClient">
+              <option value="">— None —</option>
+            </select>
+          </label>
+
+          <label>
+            Kit used
+            <select id="fieldKitSource">
+              <option value="fuzzy_duck">Fuzzy Duck kit</option>
+              <option value="mark">Mark's kit</option>
+              <option value="tom">Tom's kit</option>
+            </select>
+          </label>
+
+          <label>
+            Attendees
+            <select id="fieldAttendees" multiple size="5"></select>
+          </label>
+
+          <label>
+            Notes
+            <textarea id="fieldNotes" rows="3"></textarea>
+          </label>
+
+          <label class="checklist-item">
+            <input type="checkbox" id="fieldSkipCalendarSync">
+            Already on Google Calendar (don't sync from here)
+          </label>
+        </div>
+
+        <div class="modal-col modal-col-checklist">
+          <h3>Pre-production checklist</h3>
+
+          <div class="checklist-row">
+            <label class="checklist-item">
+              <input type="checkbox" id="fieldChecklistCallSheet">
+              Call Sheet
+              <span id="fieldChecklistCallSheetBy" class="checklist-by hidden"></span>
+            </label>
+            <div class="checklist-url-row">
+              <input type="url" id="fieldChecklistCallSheetUrl" placeholder="Drive link" class="checklist-url-input">
+              <a id="fieldChecklistCallSheetUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
+            </div>
+          </div>
+
+          <div class="checklist-row">
+            <label class="checklist-item">
+              <input type="checkbox" id="fieldChecklistRiskAssessment">
+              Risk Assessment
+              <span id="fieldChecklistRiskAssessmentBy" class="checklist-by hidden"></span>
+            </label>
+            <div class="checklist-url-row">
+              <input type="url" id="fieldChecklistRiskAssessmentUrl" placeholder="Drive link" class="checklist-url-input">
+              <a id="fieldChecklistRiskAssessmentUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
+            </div>
+          </div>
+
+          <div class="checklist-row">
+            <label class="checklist-item">
+              <input type="checkbox" id="fieldChecklistShotList">
+              Shot List
+              <span id="fieldChecklistShotListBy" class="checklist-by hidden"></span>
+            </label>
+            <div class="checklist-url-row">
+              <input type="url" id="fieldChecklistShotListUrl" placeholder="Drive link" class="checklist-url-input">
+              <a id="fieldChecklistShotListUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
+            </div>
+          </div>
+
+          <div class="checklist-row">
+            <label class="checklist-item">
+              <input type="checkbox" id="fieldChecklistPreproductionCreative">
+              Pre-production creative
+              <span id="fieldChecklistPreproductionCreativeBy" class="checklist-by hidden"></span>
+            </label>
+            <div class="checklist-url-row">
+              <input type="url" id="fieldChecklistPreproductionCreativeUrl" placeholder="Drive link" class="checklist-url-input">
+              <a id="fieldChecklistPreproductionCreativeUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="conflictWarning" class="conflict-warning hidden"></div>
+      <p id="formError" class="form-error hidden"></p>
+      <div id="syncResults" class="sync-results hidden"></div>
+
+      <div class="modal-actions">
+        <div class="modal-actions-left">
+          <button type="button" id="deleteBookingBtn" class="danger hidden">Delete</button>
+          <button type="button" id="confirmBookingBtn" class="confirm hidden">&#10003; Confirm booking</button>
+          <button type="button" id="unconfirmBookingBtn" class="hidden">&#9998; Unconfirm</button>
+        </div>
+        <div class="modal-actions-right">
+          <button type="button" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </div>
+    </form>
+    </div>
+
+    <div id="kitUsagePanel" class="kit-usage-panel">
+      <h4 id="kitUsageTitle">Kit usage</h4>
+      <div id="kitUsageList"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

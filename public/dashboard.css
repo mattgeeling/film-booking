@@ -1,0 +1,196 @@
+html, body { height: 100%; }
+
+.dashboard { min-height: 100vh; display: flex; flex-direction: column; }
+
+.dash-header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dash-brand { display: flex; align-items: center; gap: 0.65rem; }
+.dash-logo { height: 42px; width: 42px; border-radius: 50%; object-fit: cover; }
+.dash-brand-name { font-size: 1.15rem; font-weight: 700; }
+
+.dash-header-right { display: flex; align-items: center; gap: 0.85rem; }
+
+.dash-hero {
+  flex: 1 0 auto;
+  background: var(--brand-yellow);
+  padding: 2rem 2rem 2rem;
+}
+
+.dash-intro-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  align-items: start;
+}
+
+.dash-intro {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.dash-intro-logo {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+}
+
+.dash-intro p { margin: 0.5rem 0; line-height: 1.5; }
+.dash-intro p:first-of-type { font-weight: 700; }
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.dash-stat-tile {
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 110px;
+}
+
+.dash-stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.dash-stat-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dash-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dash-card-icon {
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+  margin-bottom: 0.35rem;
+  align-self: center;
+}
+
+.dash-card {
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 1.1rem 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-card h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.dash-card p { margin: 0 0 1rem; color: var(--text); line-height: 1.5; flex: 1; }
+
+.dash-card-btn {
+  display: inline-block;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 0.65rem 1rem;
+  border-radius: 4px;
+}
+
+.dash-card-btn:hover { opacity: 0.9; }
+
+.dash-card-btn.is-disabled {
+  background: #3a3a3a;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: default;
+}
+
+.dash-panels-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 1.25rem auto 0;
+}
+
+.dash-panel {
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.dash-panel h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dash-panel-list { display: flex; flex-direction: column; gap: 0.65rem; }
+
+.dash-panel-empty { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+.dash-panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-panel-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.dash-panel-item-title { font-weight: 600; font-size: 0.9rem; }
+
+.dash-panel-item-meta { font-size: 0.8rem; color: var(--muted); }
+
+.dash-panel-inverted {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dash-panel-inverted .dash-panel-empty { color: rgba(255, 255, 255, 0.65); }
+.dash-panel-inverted .dash-panel-item { border-bottom-color: rgba(255, 255, 255, 0.18); }
+.dash-panel-inverted .dash-panel-item-title { color: #fff; }
+.dash-panel-inverted .dash-panel-item-meta { color: rgba(255, 255, 255, 0.65); }
+
+.dash-footer {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: var(--brand-yellow);
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 860px) {
+  .dash-intro-row { grid-template-columns: 1fr; }
+  .dash-cards-row { grid-template-columns: 1fr; }
+  .dash-stats { grid-template-columns: 1fr; }
+  .dash-panels-row { grid-template-columns: 1fr; }
+}

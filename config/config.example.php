@@ -19,5 +19,10 @@ return [
         'workspace_domain' => '',
     ],
 
+    'mail' => [
+        'from_email' => 'production@fuzzyduck.co.uk',
+        'from_name' => 'Film Plan',
+    ],
+
     'timezone' => 'Europe/London',
 ];

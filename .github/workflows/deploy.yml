@@ -37,6 +37,10 @@ jobs:
                   'oauth_web_client_id' => '${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}',
                   'workspace_domain' => '${{ secrets.WORKSPACE_DOMAIN }}',
               ],
+              'mail' => [
+                  'from_email' => 'production@fuzzyduck.co.uk',
+                  'from_name' => 'Film Plan',
+              ],
               'timezone' => 'Europe/London',
           ];
           PHP
@@ -46,7 +50,7 @@ jobs:
 
       - name: Remove files that shouldn't be deployed
         run: |
-          rm -rf .git .github
+          rm -rf .git .github Design
           rm -f "Filming Plan.pdf"
           rm -f Screenshot*.png
 

@@ -84,6 +84,18 @@ CREATE TABLE IF NOT EXISTS blocked_days (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS person_unavailable_days (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  person_id  INT UNSIGNED NOT NULL,
+  day        DATE NOT NULL,
+  period     ENUM('all_day','am','pm') NOT NULL DEFAULT 'all_day',
+  reason     VARCHAR(255) NULL,
+  created_by VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_person_day_period (person_id, day, period),
+  FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS app_users (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email          VARCHAR(255) NOT NULL UNIQUE,
