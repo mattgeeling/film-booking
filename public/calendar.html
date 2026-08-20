@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Film Plan</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260820">
   <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -253,10 +253,11 @@
               Call Sheet
               <span id="fieldChecklistCallSheetBy" class="checklist-by hidden"></span>
             </label>
-            <div class="checklist-url-row">
+            <div class="checklist-url-row hidden">
               <input type="url" id="fieldChecklistCallSheetUrl" placeholder="Drive link" class="checklist-url-input">
               <a id="fieldChecklistCallSheetUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
             </div>
+            <button type="button" id="openCallSheetBtn" class="secondary-link-btn hidden">&#128220; Open call sheet</button>
           </div>
 
           <div class="checklist-row">
@@ -281,10 +282,11 @@
               <input type="checkbox" id="fieldChecklistShotListNa">
               Not required
             </label>
-            <div class="checklist-url-row">
+            <div class="checklist-url-row hidden">
               <input type="url" id="fieldChecklistShotListUrl" placeholder="Drive link" class="checklist-url-input">
               <a id="fieldChecklistShotListUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
             </div>
+            <button type="button" id="openShotListBtn" class="secondary-link-btn hidden">&#128220; Open shot list</button>
           </div>
 
           <div class="checklist-row">
@@ -351,12 +353,116 @@
       </div>
     </div>
 
+    <div id="callSheetBackdrop" class="modal-backdrop hidden">
+      <div class="modal modal-wide callsheet-modal">
+        <h2>Call sheet — <span id="callSheetTitle"></span></h2>
+
+        <label>
+          Day info
+          <input type="text" id="csDayInfo" placeholder="e.g. Day 1 of 1">
+        </label>
+
+        <div class="callsheet-section">
+          <h3>Location</h3>
+          <div class="field-row">
+            <label>Contact on arrival <input type="text" id="csLocationContactName" placeholder="Name"></label>
+            <label>Contact phone <input type="text" id="csLocationContactPhone"></label>
+          </div>
+          <label>Parking notes
+            <textarea id="csParkingNotes" rows="2" placeholder="e.g. Crew parking for 2 vehicles..."></textarea>
+          </label>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Weather</h3>
+          <div class="field-row">
+            <button type="button" id="csFetchWeatherBtn">Get live forecast</button>
+          </div>
+          <p id="csWeatherError" class="form-error hidden"></p>
+          <div id="csWeatherIconPreview" class="cs-weather-icon-row hidden"></div>
+          <textarea id="csWeatherSummary" rows="2" placeholder="Forecast will appear here, or type your own"></textarea>
+          <input type="hidden" id="csWeatherIcons" value="">
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Production crew</h3>
+          <div id="csProductionRows" class="callsheet-rows"></div>
+          <button type="button" id="csAddProductionRow" class="secondary-link-btn">+ Add crew row</button>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Client contacts</h3>
+          <div id="csClientRows" class="callsheet-rows"></div>
+          <button type="button" id="csAddClientRow" class="secondary-link-btn">+ Add client row</button>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Supplier &amp; equipment</h3>
+          <div id="csEquipmentRows" class="callsheet-rows"></div>
+          <button type="button" id="csAddEquipmentRow" class="secondary-link-btn">+ Add equipment row</button>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Schedule</h3>
+          <div id="csScheduleRows" class="callsheet-rows"></div>
+          <button type="button" id="csAddScheduleRow" class="secondary-link-btn">+ Add schedule row</button>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Nearest hospital / emergency notes</h3>
+          <textarea id="csNearestAe" rows="2" placeholder="e.g. Gloucestershire Royal Hospital, Great Western Rd, Gloucester (23 miles)"></textarea>
+        </div>
+
+        <p id="callSheetError" class="form-error hidden"></p>
+        <p id="callSheetSavedNote" class="muted-note hidden">Saved.</p>
+
+        <div class="modal-actions">
+          <div class="modal-actions-left"></div>
+          <div class="modal-actions-right">
+            <button type="button" id="cancelCallSheetBtn">Close</button>
+            <button type="button" id="printCallSheetBtn">Print / Save PDF</button>
+            <button type="button" id="saveCallSheetBtn" class="primary">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="callSheetPrintArea" class="callsheet-print-only"></div>
+
+    <div id="shotListBackdrop" class="modal-backdrop hidden">
+      <div class="modal modal-wide callsheet-modal">
+        <h2>Shot list — <span id="shotListTitle"></span></h2>
+
+        <label>
+          Subtitle
+          <input type="text" id="slSubtitle" placeholder="e.g. Shot List - Utilities">
+        </label>
+
+        <div id="slSections" class="shotlist-sections"></div>
+        <button type="button" id="slAddSection" class="secondary-link-btn">+ Add section</button>
+
+        <p id="shotListError" class="form-error hidden"></p>
+        <p id="shotListSavedNote" class="muted-note hidden">Saved.</p>
+
+        <div class="modal-actions">
+          <div class="modal-actions-left"></div>
+          <div class="modal-actions-right">
+            <button type="button" id="cancelShotListBtn">Close</button>
+            <button type="button" id="printShotListBtn">Print / Save PDF</button>
+            <button type="button" id="saveShotListBtn" class="primary">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="shotListPrintArea" class="callsheet-print-only"></div>
+
     <div id="kitUsagePanel" class="kit-usage-panel">
       <h4 id="kitUsageTitle">Kit usage</h4>
       <div id="kitUsageList"></div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260820"></script>
 </body>
 </html>

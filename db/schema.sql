@@ -115,6 +115,37 @@ CREATE TABLE IF NOT EXISTS person_recurring_unavailability (
   FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS call_sheets (
+  id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_id              INT UNSIGNED NOT NULL UNIQUE,
+  day_info                VARCHAR(100) NULL,
+  location_contact_name   VARCHAR(255) NULL,
+  location_contact_phone  VARCHAR(50) NULL,
+  parking_notes           TEXT NULL,
+  weather_summary         TEXT NULL,
+  weather_icons           JSON NULL,
+  production_crew         JSON NULL,
+  client_contacts         JSON NULL,
+  equipment               JSON NULL,
+  schedule                JSON NULL,
+  nearest_ae              TEXT NULL,
+  created_by              VARCHAR(255) NULL,
+  created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS shot_lists (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_id  INT UNSIGNED NOT NULL UNIQUE,
+  subtitle    VARCHAR(255) NULL,
+  sections    JSON NULL,
+  created_by  VARCHAR(255) NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS app_users (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email          VARCHAR(255) NOT NULL UNIQUE,

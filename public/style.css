@@ -812,6 +812,8 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .secondary-link-btn:hover { text-decoration: underline; }
 
+.checklist-row .secondary-link-btn { padding-left: 1.65rem; margin-top: -0.1rem; }
+
 .field-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
@@ -1252,6 +1254,7 @@ main { padding: 1rem 1.5rem 3rem; }
 .hidden { display: none !important; }
 
 .print-only { display: none; }
+.callsheet-print-only { display: none; }
 
 @media print {
   @page {
@@ -1263,6 +1266,22 @@ main { padding: 1rem 1.5rem 3rem; }
 
   .topbar, #kitUsagePanel, #modalBackdrop, #peopleSummary {
     display: none !important;
+  }
+
+  body.printing-document .topbar,
+  body.printing-document #kitUsagePanel,
+  body.printing-document main,
+  body.printing-document #modalBackdrop,
+  body.printing-document #emailPreviewBackdrop,
+  body.printing-document #callSheetBackdrop,
+  body.printing-document #shotListBackdrop,
+  body.printing-document .print-only {
+    display: none !important;
+  }
+
+  body.printing-document #callSheetPrintArea,
+  body.printing-document #shotListPrintArea {
+    display: block !important;
   }
 
   main { padding: 0; }
@@ -1295,3 +1314,196 @@ main { padding: 1rem 1.5rem 3rem; }
   .booking-block { cursor: default; }
   .day-column:hover { background-color: transparent; }
 }
+
+/* Call sheet editor */
+.callsheet-modal { max-height: calc(100vh - 4rem); overflow-y: auto; }
+
+.callsheet-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.callsheet-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.callsheet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.callsheet-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.callsheet-row input, .callsheet-row textarea {
+  font: inherit;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  min-width: 0;
+}
+
+.callsheet-row .cs-remove-row {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Shot list editor */
+.shotlist-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.shotlist-section {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.shotlist-section .field-row { grid-template-columns: 1fr 1fr; }
+
+.shotlist-section input, .shotlist-section textarea {
+  font: inherit;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  width: 100%;
+}
+
+.shotlist-section .sl-heading { font-weight: 700; text-transform: uppercase; font-size: 0.85rem; }
+.shotlist-section .sl-note { font-style: italic; font-size: 0.85rem; }
+
+.shotlist-section .cs-remove-row {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Call sheet print output */
+#callSheetPrintArea, #shotListPrintArea {
+  font-family: Helvetica, Arial, sans-serif;
+  color: #111;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.cs-print-header { text-align: center; margin-bottom: 0.75rem; }
+.cs-print-header .cs-print-logo { float: right; height: 36px; }
+.cs-print-header h1 { font-size: 1.15rem; margin: 0 0 2px; }
+.cs-print-header .cs-day { font-size: 0.9rem; color: #444; margin: 0; }
+.cs-print-confidential {
+  text-align: center;
+  font-size: 0.68rem;
+  color: #555;
+  margin: 0.75rem 0 1rem;
+  line-height: 1.5;
+}
+.cs-print-confidential strong { display: block; font-size: 0.75rem; margin-bottom: 2px; }
+
+.cs-print-box {
+  border: 1px solid #222;
+  margin-bottom: 0.85rem;
+  page-break-inside: avoid;
+}
+
+.cs-print-box-title {
+  background: #f5cf82;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.3rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #222;
+}
+
+.cs-print-box-body { padding: 0.6rem 0.8rem; font-size: 0.8rem; line-height: 1.5; }
+.cs-print-box-body p { margin: 0.3rem 0; }
+
+.cs-print-weather-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.cs-print-weather-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.15rem;
+  flex: 1 1 auto;
+}
+.cs-print-weather-icon { font-size: 2.1rem; line-height: 1; }
+.cs-print-weather-text { font-size: 0.78rem; line-height: 1.3; }
+
+.cs-weather-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.cs-weather-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-alt, #f2f2f2);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
+.cs-weather-chip-icon { font-size: 1.1rem; line-height: 1; }
+.cs-weather-chip-time { font-weight: 600; }
+
+.cs-print-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.cs-print-table th, .cs-print-table td {
+  border: 1px solid #999;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.cs-print-table th { background: #f2f2f2; }
+
+.cs-print-footer {
+  font-size: 0.7rem;
+  color: #444;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Shot list print output */
+.sl-print-header { margin-bottom: 0.5rem; }
+.sl-print-header .cs-print-logo { float: right; height: 36px; }
+.sl-print-header .sl-client { font-weight: 700; font-size: 0.95rem; margin: 0; }
+.sl-print-header .sl-subtitle { margin: 2px 0; font-size: 0.85rem; }
+.sl-print-header .sl-date { margin: 0; font-size: 0.8rem; color: #444; }
+.sl-print-rule { border: none; border-top: 1px solid #999; margin: 0.6rem 0 1rem; }
+
+.sl-print-section { margin-bottom: 1.1rem; page-break-inside: avoid; }
+.sl-print-section h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 0.4rem;
+}
+.sl-print-section .sl-print-note {
+  font-style: italic;
+  font-size: 0.78rem;
+  color: #333;
+  margin: 0.4rem 0 0;
+}
+.sl-print-section ul { margin: 0; padding-left: 1.2rem; }
+.sl-print-section li { font-size: 0.8rem; line-height: 1.55; }

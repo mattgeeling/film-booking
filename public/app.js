@@ -28,6 +28,8 @@
     unavailableByDate: {},
     recurringUnavailability: [],
     adminSubView: 'clients',
+    callSheetBooking: null,
+    shotListBooking: null,
     kitUsagePageMonth: null,
     currentView: 'week',
     monthStr: null,
@@ -99,6 +101,45 @@
     emailPreviewError: document.getElementById('emailPreviewError'),
     cancelEmailPreviewBtn: document.getElementById('cancelEmailPreviewBtn'),
     sendEmailPreviewBtn: document.getElementById('sendEmailPreviewBtn'),
+    openCallSheetBtn: document.getElementById('openCallSheetBtn'),
+    callSheetBackdrop: document.getElementById('callSheetBackdrop'),
+    callSheetTitle: document.getElementById('callSheetTitle'),
+    csDayInfo: document.getElementById('csDayInfo'),
+    csLocationContactName: document.getElementById('csLocationContactName'),
+    csLocationContactPhone: document.getElementById('csLocationContactPhone'),
+    csParkingNotes: document.getElementById('csParkingNotes'),
+    csFetchWeatherBtn: document.getElementById('csFetchWeatherBtn'),
+    csWeatherError: document.getElementById('csWeatherError'),
+    csWeatherIconPreview: document.getElementById('csWeatherIconPreview'),
+    csWeatherSummary: document.getElementById('csWeatherSummary'),
+    csWeatherIcons: document.getElementById('csWeatherIcons'),
+    csProductionRows: document.getElementById('csProductionRows'),
+    csAddProductionRow: document.getElementById('csAddProductionRow'),
+    csClientRows: document.getElementById('csClientRows'),
+    csAddClientRow: document.getElementById('csAddClientRow'),
+    csEquipmentRows: document.getElementById('csEquipmentRows'),
+    csAddEquipmentRow: document.getElementById('csAddEquipmentRow'),
+    csScheduleRows: document.getElementById('csScheduleRows'),
+    csAddScheduleRow: document.getElementById('csAddScheduleRow'),
+    csNearestAe: document.getElementById('csNearestAe'),
+    callSheetError: document.getElementById('callSheetError'),
+    callSheetSavedNote: document.getElementById('callSheetSavedNote'),
+    cancelCallSheetBtn: document.getElementById('cancelCallSheetBtn'),
+    printCallSheetBtn: document.getElementById('printCallSheetBtn'),
+    saveCallSheetBtn: document.getElementById('saveCallSheetBtn'),
+    callSheetPrintArea: document.getElementById('callSheetPrintArea'),
+    openShotListBtn: document.getElementById('openShotListBtn'),
+    shotListBackdrop: document.getElementById('shotListBackdrop'),
+    shotListTitle: document.getElementById('shotListTitle'),
+    slSubtitle: document.getElementById('slSubtitle'),
+    slSections: document.getElementById('slSections'),
+    slAddSection: document.getElementById('slAddSection'),
+    shotListError: document.getElementById('shotListError'),
+    shotListSavedNote: document.getElementById('shotListSavedNote'),
+    cancelShotListBtn: document.getElementById('cancelShotListBtn'),
+    printShotListBtn: document.getElementById('printShotListBtn'),
+    saveShotListBtn: document.getElementById('saveShotListBtn'),
+    shotListPrintArea: document.getElementById('shotListPrintArea'),
     syncResults: document.getElementById('syncResults'),
     conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
@@ -1222,6 +1263,7 @@
 
   function openAddModal(date) {
     state.editingId = null;
+    state.editingBooking = null;
     el.modalTitle.textContent = 'New booking';
     el.bookingForm.reset();
     el.fieldDate.value = isoDate(date);
@@ -1245,6 +1287,8 @@
     el.confirmBookingBtn.classList.add('hidden');
     el.unconfirmBookingBtn.classList.add('hidden');
     el.emailConfirmationBtn.classList.add('hidden');
+    el.openCallSheetBtn.classList.add('hidden');
+    el.openShotListBtn.classList.add('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1253,6 +1297,7 @@
 
   function openEditModal(booking) {
     state.editingId = booking.id;
+    state.editingBooking = booking;
     el.modalTitle.textContent = booking.title;
     const start = new Date(booking.start_datetime.replace(' ', 'T'));
     const end = new Date(booking.end_datetime.replace(' ', 'T'));
@@ -1288,6 +1333,8 @@
     el.confirmBookingBtn.classList.toggle('hidden', booking.status !== 'pencil');
     el.unconfirmBookingBtn.classList.toggle('hidden', booking.status !== 'confirmed');
     el.emailConfirmationBtn.classList.toggle('hidden', booking.status !== 'confirmed');
+    el.openCallSheetBtn.classList.remove('hidden');
+    el.openShotListBtn.classList.remove('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1298,6 +1345,7 @@
   function closeModal() {
     el.modalBackdrop.classList.add('hidden');
     state.editingId = null;
+    state.editingBooking = null;
   }
 
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -1430,6 +1478,476 @@
     } finally {
       el.sendEmailPreviewBtn.disabled = false;
     }
+  }
+
+  const CS_PERSON_FIELDS = [
+    { key: 'name', placeholder: 'Name' },
+    { key: 'title', placeholder: 'Title' },
+    { key: 'contact', placeholder: 'Contact number' },
+    { key: 'email', placeholder: 'Email' },
+    { key: 'call_time', placeholder: 'Call time', type: 'time', flex: '0 0 110px' },
+  ];
+  const CS_EQUIPMENT_FIELDS = [
+    { key: 'supplier', placeholder: 'Supplier', flex: '0 0 160px' },
+    { key: 'items', placeholder: 'Equipment (one per line)', type: 'textarea', flex: '1' },
+  ];
+  const CS_SCHEDULE_FIELDS = [
+    { key: 'time', placeholder: 'Time (e.g. 08:30 - 09:00)', flex: '0 0 180px' },
+    { key: 'description', placeholder: 'Activity', flex: '1' },
+  ];
+
+  function buildCallSheetFieldRow(container, fields, values) {
+    const row = document.createElement('div');
+    row.className = 'callsheet-row';
+    for (const f of fields) {
+      const input = f.type === 'textarea' ? document.createElement('textarea') : document.createElement('input');
+      if (f.type !== 'textarea') input.type = f.type || 'text';
+      else input.rows = 2;
+      input.placeholder = f.placeholder;
+      input.dataset.key = f.key;
+      input.value = (values && values[f.key]) || '';
+      input.style.flex = f.flex || '1';
+      row.appendChild(input);
+    }
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'cs-remove-row';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => row.remove());
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+  }
+
+  function collectCallSheetRows(container, keys) {
+    return Array.from(container.querySelectorAll('.callsheet-row')).map((row) => {
+      const obj = {};
+      for (const key of keys) {
+        const input = row.querySelector(`[data-key="${key}"]`);
+        obj[key] = input ? input.value.trim() : '';
+      }
+      return obj;
+    }).filter((obj) => Object.values(obj).some((v) => v));
+  }
+
+  async function openCallSheet(booking) {
+    state.callSheetBooking = booking;
+    el.callSheetTitle.textContent = booking.title;
+    el.callSheetError.classList.add('hidden');
+    el.callSheetSavedNote.classList.add('hidden');
+    el.csWeatherError.classList.add('hidden');
+    el.callSheetBackdrop.classList.remove('hidden');
+    try {
+      const data = await apiGet(`api/call_sheet_get.php?booking_id=${booking.id}`);
+      el.csDayInfo.value = data.day_info || '';
+      el.csLocationContactName.value = data.location_contact_name || '';
+      el.csLocationContactPhone.value = data.location_contact_phone || '';
+      el.csParkingNotes.value = data.parking_notes || '';
+      el.csWeatherSummary.value = data.weather_summary || '';
+      el.csWeatherIcons.value = data.weather_icons ? JSON.stringify(data.weather_icons) : '';
+      renderWeatherIconPreview(data.weather_icons, data.weather_summary);
+      el.csNearestAe.value = data.nearest_ae || '';
+
+      el.csProductionRows.innerHTML = '';
+      for (const row of data.production_crew) buildCallSheetFieldRow(el.csProductionRows, CS_PERSON_FIELDS, row);
+      el.csClientRows.innerHTML = '';
+      for (const row of data.client_contacts) buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, row);
+      el.csEquipmentRows.innerHTML = '';
+      for (const row of data.equipment) buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, row);
+      el.csScheduleRows.innerHTML = '';
+      for (const row of data.schedule) buildCallSheetFieldRow(el.csScheduleRows, CS_SCHEDULE_FIELDS, row);
+    } catch (err) {
+      el.callSheetError.textContent = err.message;
+      el.callSheetError.classList.remove('hidden');
+    }
+  }
+
+  function closeCallSheet() {
+    el.callSheetBackdrop.classList.add('hidden');
+    state.callSheetBooking = null;
+  }
+
+  async function saveCallSheet() {
+    if (!state.callSheetBooking) return;
+    el.callSheetError.classList.add('hidden');
+    el.callSheetSavedNote.classList.add('hidden');
+    el.saveCallSheetBtn.disabled = true;
+    try {
+      await apiPost(`api/call_sheet_save.php?booking_id=${state.callSheetBooking.id}`, {
+        day_info: el.csDayInfo.value.trim(),
+        location_contact_name: el.csLocationContactName.value.trim(),
+        location_contact_phone: el.csLocationContactPhone.value.trim(),
+        parking_notes: el.csParkingNotes.value.trim(),
+        weather_summary: el.csWeatherSummary.value.trim(),
+        weather_icons: el.csWeatherIcons.value ? JSON.parse(el.csWeatherIcons.value) : null,
+        nearest_ae: el.csNearestAe.value.trim(),
+        production_crew: collectCallSheetRows(el.csProductionRows, ['name', 'title', 'contact', 'email', 'call_time']),
+        client_contacts: collectCallSheetRows(el.csClientRows, ['name', 'title', 'contact', 'email', 'call_time']),
+        equipment: collectCallSheetRows(el.csEquipmentRows, ['supplier', 'items']),
+        schedule: collectCallSheetRows(el.csScheduleRows, ['time', 'description']),
+      });
+      el.callSheetSavedNote.classList.remove('hidden');
+    } catch (err) {
+      el.callSheetError.textContent = err.message;
+      el.callSheetError.classList.remove('hidden');
+    } finally {
+      el.saveCallSheetBtn.disabled = false;
+    }
+  }
+
+  async function fetchLiveWeather() {
+    const booking = state.callSheetBooking;
+    el.csWeatherError.classList.add('hidden');
+    if (!booking || !booking.location) {
+      el.csWeatherError.textContent = 'Add a location to the booking first.';
+      el.csWeatherError.classList.remove('hidden');
+      return;
+    }
+    el.csFetchWeatherBtn.disabled = true;
+    try {
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(booking.location)}&countrycodes=gb&limit=1&format=json`);
+      let geoResults = await geoRes.json();
+      if (!geoResults.length) {
+        const postcodeMatch = booking.location.match(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i);
+        if (postcodeMatch) {
+          const pcRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(postcodeMatch[0])}&countrycodes=gb&limit=1&format=json`);
+          geoResults = await pcRes.json();
+        }
+      }
+      if (!geoResults.length) {
+        throw new Error(`Couldn't find "${booking.location}" for a weather lookup — check the spelling, or try adding just the postcode to the booking's location, or type the forecast in manually.`);
+      }
+      const latitude = geoResults[0].lat;
+      const longitude = geoResults[0].lon;
+      const dateIso = booking.start_datetime.slice(0, 10);
+      const forecastRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,precipitation_probability,windspeed_10m,weathercode&timezone=Europe%2FLondon&start_date=${dateIso}&end_date=${dateIso}`);
+      const forecastData = await forecastRes.json();
+      if (!forecastData.hourly) {
+        if (forecastData.error && /out of allowed range/i.test(forecastData.reason || '')) {
+          throw new Error("That date is too far away for a forecast yet — weather lookups only work roughly 2 weeks ahead. Try again closer to the shoot.");
+        }
+        throw new Error(forecastData.reason || 'Weather forecast unavailable for that date.');
+      }
+
+      const startHour = Number(booking.start_datetime.slice(11, 13));
+      const endHour = Number(booking.end_datetime.slice(11, 13));
+      const times = forecastData.hourly.time;
+      const temps = forecastData.hourly.temperature_2m;
+      const precip = forecastData.hourly.precipitation_probability;
+      const wind = forecastData.hourly.windspeed_10m;
+      const codes = forecastData.hourly.weathercode;
+
+      const span = Math.max(endHour - startHour, 1);
+      const step = Math.max(Math.round(span / 4), 1);
+      const sampleHours = [];
+      for (let h = startHour; h <= endHour; h += step) sampleHours.push(h);
+      if (!sampleHours.includes(endHour)) sampleHours.push(endHour);
+
+      const icons = [];
+      const lines = sampleHours.map((h) => {
+        const idx = times.findIndex((t) => Number(t.slice(11, 13)) === h);
+        if (idx === -1) return null;
+        const time12 = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+        icons.push(codes[idx]);
+        return `${time12}: ${Math.round(temps[idx])}°C, ${precip[idx]}% chance of rain, ${Math.round(wind[idx])}mph wind`;
+      }).filter(Boolean);
+
+      if (!lines.length) throw new Error('No forecast data available for that time range.');
+      el.csWeatherSummary.value = lines.join('\n');
+      el.csWeatherIcons.value = JSON.stringify(icons);
+      renderWeatherIconPreview(icons, lines.join('\n'));
+    } catch (err) {
+      el.csWeatherError.textContent = err.message;
+      el.csWeatherError.classList.remove('hidden');
+    } finally {
+      el.csFetchWeatherBtn.disabled = false;
+    }
+  }
+
+  const WEATHER_ICONS = {
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️',
+    51: '🌦️', 53: '🌦️', 55: '🌦️', 56: '🌧️', 57: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌧️', 67: '🌧️',
+    71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
+    80: '🌦️', 81: '🌦️', 82: '🌧️',
+    85: '🌨️', 86: '🌨️',
+    95: '⛈️', 96: '⛈️', 99: '⛈️',
+  };
+
+  function weatherIconForCode(code) {
+    return WEATHER_ICONS[code] || '🌡️';
+  }
+
+  function renderWeatherIconPreview(icons, weatherText) {
+    if (!icons || !icons.length) {
+      el.csWeatherIconPreview.classList.add('hidden');
+      el.csWeatherIconPreview.innerHTML = '';
+      return;
+    }
+    const lines = (weatherText || '').split('\n').filter(Boolean);
+    el.csWeatherIconPreview.innerHTML = icons.map((code, i) => {
+      const time = (lines[i] || '').split(':')[0] || '';
+      return `<span class="cs-weather-chip"><span class="cs-weather-chip-icon">${weatherIconForCode(code)}</span><span class="cs-weather-chip-time">${csEscapeHtml(time)}</span></span>`;
+    }).join('');
+    el.csWeatherIconPreview.classList.remove('hidden');
+  }
+
+  function csEscapeHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderWeatherPrintBody() {
+    const lines = el.csWeatherSummary.value.split('\n').filter(Boolean);
+    const icons = el.csWeatherIcons.value ? JSON.parse(el.csWeatherIcons.value) : null;
+    if (icons && icons.length === lines.length) {
+      return `<div class="cs-print-weather-row">${lines.map((line, i) => `
+        <div class="cs-print-weather-cell">
+          <div class="cs-print-weather-icon">${weatherIconForCode(icons[i])}</div>
+          <div class="cs-print-weather-text">${csEscapeHtml(line)}</div>
+        </div>`).join('')}</div>`;
+    }
+    return `<p>${csEscapeHtml(el.csWeatherSummary.value).replace(/\n/g, '<br>')}</p>`;
+  }
+
+  function renderCallSheetPrintHtml() {
+    const booking = state.callSheetBooking;
+    const start = new Date(booking.start_datetime.replace(' ', 'T'));
+    const dateLabel = start.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const production = collectCallSheetRows(el.csProductionRows, ['name', 'title', 'contact', 'email', 'call_time']);
+    const clients = collectCallSheetRows(el.csClientRows, ['name', 'title', 'contact', 'email', 'call_time']);
+    const equipment = collectCallSheetRows(el.csEquipmentRows, ['supplier', 'items']);
+    const schedule = collectCallSheetRows(el.csScheduleRows, ['time', 'description']);
+
+    const personTable = (rows) => rows.length ? `
+      <table class="cs-print-table">
+        <thead><tr><th>Name</th><th>Title</th><th>Contact</th><th>Email</th><th>Call time</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr><td>${csEscapeHtml(r.name)}</td><td>${csEscapeHtml(r.title)}</td><td>${csEscapeHtml(r.contact)}</td><td>${csEscapeHtml(r.email)}</td><td>${csEscapeHtml(r.call_time)}</td></tr>`).join('')}</tbody>
+      </table>` : '<p style="font-size:0.8rem;color:#777;">None added.</p>';
+
+    const equipmentRows = equipment.map((r) => `<tr><td>${csEscapeHtml(r.supplier)}</td><td>${csEscapeHtml(r.items).replace(/\n/g, '<br>')}</td></tr>`).join('');
+    const scheduleRows = schedule.map((r) => `<tr><td>${csEscapeHtml(r.time)}</td><td>${csEscapeHtml(r.description)}</td></tr>`).join('');
+    const dayInfo = csEscapeHtml(el.csDayInfo.value);
+    const w3wSlug = (booking.what3words || '').replace(/^\/\/\//, '');
+
+    return `
+      <div class="cs-print-header">
+        <img class="cs-print-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+        <h1>${csEscapeHtml(booking.title)}</h1>
+        <p class="cs-day">${dayInfo ? dayInfo + ' — ' : ''}${dateLabel}</p>
+      </div>
+      <div class="cs-print-confidential">
+        <strong>STRICTLY CONFIDENTIAL</strong>
+        Under the Data Protection Act 1998, production are responsible for ensuring all information contained within this
+        document is used in compliance with the Act. Store this information securely, don't disclose it to anyone without a
+        clear business reason to see it, and destroy it securely once the shoot is complete.
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">LOCATION</div>
+        <div class="cs-print-box-body">
+          ${booking.location ? `<p><strong>Address:</strong> ${csEscapeHtml(booking.location)}</p>` : ''}
+          ${booking.what3words ? `<p><strong>what3words:</strong> ${csEscapeHtml(booking.what3words)} &mdash; <a href="https://what3words.com/${csEscapeHtml(w3wSlug)}">open</a></p>` : ''}
+          ${el.csLocationContactName.value ? `<p><strong>Contact on arrival:</strong> ${csEscapeHtml(el.csLocationContactName.value)}${el.csLocationContactPhone.value ? ' — ' + csEscapeHtml(el.csLocationContactPhone.value) : ''}</p>` : ''}
+          ${el.csParkingNotes.value ? `<p><strong>Parking:</strong> ${csEscapeHtml(el.csParkingNotes.value).replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+      </div>
+
+      ${el.csWeatherSummary.value ? `
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">WEATHER</div>
+        <div class="cs-print-box-body">${renderWeatherPrintBody()}</div>
+      </div>` : ''}
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">PRODUCTION</div>
+        <div class="cs-print-box-body">${personTable(production)}</div>
+      </div>
+
+      ${clients.length ? `
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">CLIENT</div>
+        <div class="cs-print-box-body">${personTable(clients)}</div>
+      </div>` : ''}
+
+      ${equipment.length ? `
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">SUPPLIER &amp; EQUIPMENT</div>
+        <div class="cs-print-box-body">
+          <table class="cs-print-table"><thead><tr><th style="width:30%">Supplier</th><th>Equipment</th></tr></thead>
+          <tbody>${equipmentRows}</tbody></table>
+        </div>
+      </div>` : ''}
+
+      ${schedule.length ? `
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">SCHEDULE</div>
+        <div class="cs-print-box-body">
+          <table class="cs-print-table"><thead><tr><th style="width:25%">Time</th><th>Activity</th></tr></thead>
+          <tbody>${scheduleRows}</tbody></table>
+        </div>
+      </div>` : ''}
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">EMERGENCY</div>
+        <div class="cs-print-box-body">
+          <p><strong>Fire / Police / Ambulance:</strong> 111 non-emergency, 999 emergency</p>
+          ${el.csNearestAe.value ? `<p><strong>Nearest A&amp;E:</strong> ${csEscapeHtml(el.csNearestAe.value).replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+      </div>
+
+      <p class="cs-print-footer">
+        30 day payment terms for processing invoices. Please forward invoices to accounts@fuzzyduck.co.uk and cc the production manager.
+      </p>
+    `;
+  }
+
+  function triggerDocumentPrint(printAreaEl, html) {
+    el.callSheetPrintArea.innerHTML = '';
+    el.shotListPrintArea.innerHTML = '';
+    printAreaEl.innerHTML = html;
+
+    const styleTag = document.createElement('style');
+    styleTag.textContent = '@page { size: portrait; margin: 12mm; }';
+    document.head.appendChild(styleTag);
+    document.body.classList.add('printing-document');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-document');
+      styleTag.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 8000);
+  }
+
+  function onPrintCallSheetClick() {
+    if (!state.callSheetBooking) return;
+    triggerDocumentPrint(el.callSheetPrintArea, renderCallSheetPrintHtml());
+  }
+
+  function buildShotListSection(data) {
+    const section = document.createElement('div');
+    section.className = 'shotlist-section';
+
+    const row = document.createElement('div');
+    row.className = 'field-row';
+
+    const headingInput = document.createElement('input');
+    headingInput.type = 'text';
+    headingInput.className = 'sl-heading';
+    headingInput.placeholder = 'Section heading (e.g. ESTABLISHING)';
+    headingInput.value = (data && data.heading) || '';
+
+    const noteInput = document.createElement('input');
+    noteInput.type = 'text';
+    noteInput.className = 'sl-note';
+    noteInput.placeholder = 'Note (optional, e.g. 50FPS for cutaways)';
+    noteInput.value = (data && data.note) || '';
+
+    row.appendChild(headingInput);
+    row.appendChild(noteInput);
+
+    const itemsInput = document.createElement('textarea');
+    itemsInput.className = 'sl-items';
+    itemsInput.rows = 4;
+    itemsInput.placeholder = 'One shot per line';
+    itemsInput.value = (data && data.items) ? data.items.join('\n') : '';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'cs-remove-row';
+    removeBtn.textContent = 'Remove section';
+    removeBtn.addEventListener('click', () => section.remove());
+
+    section.appendChild(row);
+    section.appendChild(itemsInput);
+    section.appendChild(removeBtn);
+    el.slSections.appendChild(section);
+  }
+
+  function collectShotListSections() {
+    return Array.from(el.slSections.querySelectorAll('.shotlist-section')).map((section) => ({
+      heading: section.querySelector('.sl-heading').value.trim(),
+      note: section.querySelector('.sl-note').value.trim(),
+      items: section.querySelector('.sl-items').value.split('\n').map((s) => s.trim()).filter(Boolean),
+    })).filter((s) => s.heading || s.items.length);
+  }
+
+  async function openShotList(booking) {
+    state.shotListBooking = booking;
+    el.shotListTitle.textContent = booking.title;
+    el.shotListError.classList.add('hidden');
+    el.shotListSavedNote.classList.add('hidden');
+    el.shotListBackdrop.classList.remove('hidden');
+    try {
+      const data = await apiGet(`api/shot_list_get.php?booking_id=${booking.id}`);
+      el.slSubtitle.value = data.subtitle || '';
+      el.slSections.innerHTML = '';
+      if (data.sections.length) {
+        for (const section of data.sections) buildShotListSection(section);
+      } else {
+        buildShotListSection({});
+      }
+    } catch (err) {
+      el.shotListError.textContent = err.message;
+      el.shotListError.classList.remove('hidden');
+    }
+  }
+
+  function closeShotList() {
+    el.shotListBackdrop.classList.add('hidden');
+    state.shotListBooking = null;
+  }
+
+  async function saveShotList() {
+    if (!state.shotListBooking) return;
+    el.shotListError.classList.add('hidden');
+    el.shotListSavedNote.classList.add('hidden');
+    el.saveShotListBtn.disabled = true;
+    try {
+      await apiPost(`api/shot_list_save.php?booking_id=${state.shotListBooking.id}`, {
+        subtitle: el.slSubtitle.value.trim(),
+        sections: collectShotListSections(),
+      });
+      el.shotListSavedNote.classList.remove('hidden');
+    } catch (err) {
+      el.shotListError.textContent = err.message;
+      el.shotListError.classList.remove('hidden');
+    } finally {
+      el.saveShotListBtn.disabled = false;
+    }
+  }
+
+  function renderShotListPrintHtml() {
+    const booking = state.shotListBooking;
+    const start = new Date(booking.start_datetime.replace(' ', 'T'));
+    const dateLabel = start.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const sections = collectShotListSections();
+
+    const sectionsHtml = sections.map((s) => `
+      <div class="sl-print-section">
+        <h2>${csEscapeHtml(s.heading)}</h2>
+        <ul>${s.items.map((item) => `<li>${csEscapeHtml(item)}</li>`).join('')}</ul>
+        ${s.note ? `<p class="sl-print-note">${csEscapeHtml(s.note)}</p>` : ''}
+      </div>`).join('');
+
+    return `
+      <div class="sl-print-header">
+        <img class="cs-print-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+        ${booking.client_name ? `<p class="sl-client">${csEscapeHtml(booking.client_name)}</p>` : ''}
+        <p class="sl-subtitle">${csEscapeHtml(el.slSubtitle.value || booking.title)}</p>
+        <p class="sl-date">${dateLabel}</p>
+      </div>
+      <hr class="sl-print-rule">
+      ${sectionsHtml}
+    `;
+  }
+
+  function onPrintShotListClick() {
+    if (!state.shotListBooking) return;
+    triggerDocumentPrint(el.shotListPrintArea, renderShotListPrintHtml());
   }
 
   async function onUnconfirmClick() {
@@ -2128,6 +2646,26 @@
   el.cancelEmailPreviewBtn.addEventListener('click', closeEmailPreview);
   el.sendEmailPreviewBtn.addEventListener('click', onSendEmailPreviewClick);
   el.emailPreviewBackdrop.addEventListener('click', (e) => { if (e.target === el.emailPreviewBackdrop) closeEmailPreview(); });
+  el.openCallSheetBtn.addEventListener('click', () => { if (state.editingBooking) openCallSheet(state.editingBooking); });
+  el.cancelCallSheetBtn.addEventListener('click', closeCallSheet);
+  el.saveCallSheetBtn.addEventListener('click', saveCallSheet);
+  el.printCallSheetBtn.addEventListener('click', onPrintCallSheetClick);
+  el.csFetchWeatherBtn.addEventListener('click', fetchLiveWeather);
+  el.csWeatherSummary.addEventListener('input', () => {
+    el.csWeatherIcons.value = '';
+    renderWeatherIconPreview(null, '');
+  });
+  el.callSheetBackdrop.addEventListener('click', (e) => { if (e.target === el.callSheetBackdrop) closeCallSheet(); });
+  el.csAddProductionRow.addEventListener('click', () => buildCallSheetFieldRow(el.csProductionRows, CS_PERSON_FIELDS, {}));
+  el.csAddClientRow.addEventListener('click', () => buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, {}));
+  el.csAddEquipmentRow.addEventListener('click', () => buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, {}));
+  el.csAddScheduleRow.addEventListener('click', () => buildCallSheetFieldRow(el.csScheduleRows, CS_SCHEDULE_FIELDS, {}));
+  el.openShotListBtn.addEventListener('click', () => { if (state.editingBooking) openShotList(state.editingBooking); });
+  el.cancelShotListBtn.addEventListener('click', closeShotList);
+  el.saveShotListBtn.addEventListener('click', saveShotList);
+  el.printShotListBtn.addEventListener('click', onPrintShotListClick);
+  el.shotListBackdrop.addEventListener('click', (e) => { if (e.target === el.shotListBackdrop) closeShotList(); });
+  el.slAddSection.addEventListener('click', () => buildShotListSection({}));
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
