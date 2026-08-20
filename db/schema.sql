@@ -8,21 +8,48 @@ CREATE TABLE IF NOT EXISTS people (
   updated_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS clients (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(150)  NOT NULL,
+  logo_path  VARCHAR(255)  NULL,
+  active     TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS bookings (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   title          VARCHAR(255) NOT NULL,
   location       VARCHAR(255) NULL,
+  what3words     VARCHAR(255) NULL,
+  client_id      INT UNSIGNED NULL,
   notes          TEXT NULL,
   start_datetime DATETIME NOT NULL,
   end_datetime   DATETIME NOT NULL,
   status         ENUM('pencil','confirmed','cancelled') NOT NULL DEFAULT 'pencil',
+  checklist_call_sheet             TINYINT(1)   NOT NULL DEFAULT 0,
+  checklist_call_sheet_by          VARCHAR(255) NULL,
+  checklist_call_sheet_url         VARCHAR(500) NULL,
+  checklist_risk_assessment        TINYINT(1)   NOT NULL DEFAULT 0,
+  checklist_risk_assessment_by     VARCHAR(255) NULL,
+  checklist_risk_assessment_url    VARCHAR(500) NULL,
+  checklist_shot_list               TINYINT(1)   NOT NULL DEFAULT 0,
+  checklist_shot_list_by            VARCHAR(255) NULL,
+  checklist_shot_list_url           VARCHAR(500) NULL,
+  checklist_preproduction_creative     TINYINT(1)   NOT NULL DEFAULT 0,
+  checklist_preproduction_creative_by  VARCHAR(255) NULL,
+  checklist_preproduction_creative_url VARCHAR(500) NULL,
+  skip_calendar_sync TINYINT(1) NOT NULL DEFAULT 0,
+  kit_source ENUM('fuzzy_duck','mark','tom') NOT NULL DEFAULT 'fuzzy_duck',
   created_by     VARCHAR(255) NULL,
+  created_by_name VARCHAR(255) NULL,
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   confirmed_at   TIMESTAMP NULL,
   cancelled_at   TIMESTAMP NULL,
   INDEX idx_start (start_datetime),
-  INDEX idx_status (status)
+  INDEX idx_status (status),
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS booking_people (
@@ -47,6 +74,14 @@ CREATE TABLE IF NOT EXISTS booking_calendar_events (
   UNIQUE KEY uniq_booking_person (booking_id, person_id),
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   FOREIGN KEY (person_id)  REFERENCES people(id)   ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS blocked_days (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  day        DATE NOT NULL UNIQUE,
+  reason     VARCHAR(255) NULL,
+  created_by VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS app_users (

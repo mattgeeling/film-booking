@@ -4,17 +4,27 @@
   const PX_PER_HOUR = 60;
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const STATUS_LABELS = { pencil: '✎ Pencil', confirmed: '✓ Confirmed' };
+  const CHECKLIST_ITEMS = [
+    { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet' },
+    { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment' },
+    { key: 'shot_list', elKey: 'ShotList', label: 'Shot List' },
+    { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative' },
+  ];
   const GOOGLE_CLIENT_ID = '1020593076419-tv5l93390dog560otm0o2p87h36vq1rs.apps.googleusercontent.com';
 
   const state = {
     weekStart: mondayOf(new Date()),
     bookings: [],
     people: [],
+    clients: [],
+    blockedDaysByDate: {},
+    kitUsagePageMonth: null,
     editingId: null,
   };
 
   const el = {
     weekGrid: document.getElementById('weekGrid'),
+    weekBody: document.getElementById('weekBody'),
     weekLabel: document.getElementById('weekLabel'),
     weekTally: document.getElementById('weekTally'),
     peopleSummaryList: document.getElementById('peopleSummaryList'),
@@ -30,13 +40,37 @@
     fieldStart: document.getElementById('fieldStart'),
     fieldEnd: document.getElementById('fieldEnd'),
     fieldLocation: document.getElementById('fieldLocation'),
+    fieldLocationMapsLink: document.getElementById('fieldLocationMapsLink'),
+    fieldWhat3Words: document.getElementById('fieldWhat3Words'),
+    fieldWhat3WordsLink: document.getElementById('fieldWhat3WordsLink'),
+    fieldClient: document.getElementById('fieldClient'),
+    fieldKitSource: document.getElementById('fieldKitSource'),
     fieldAttendees: document.getElementById('fieldAttendees'),
     fieldNotes: document.getElementById('fieldNotes'),
+    fieldSkipCalendarSync: document.getElementById('fieldSkipCalendarSync'),
+    fieldChecklistCallSheet: document.getElementById('fieldChecklistCallSheet'),
+    fieldChecklistRiskAssessment: document.getElementById('fieldChecklistRiskAssessment'),
+    fieldChecklistShotList: document.getElementById('fieldChecklistShotList'),
+    fieldChecklistPreproductionCreative: document.getElementById('fieldChecklistPreproductionCreative'),
+    fieldChecklistCallSheetBy: document.getElementById('fieldChecklistCallSheetBy'),
+    fieldChecklistRiskAssessmentBy: document.getElementById('fieldChecklistRiskAssessmentBy'),
+    fieldChecklistShotListBy: document.getElementById('fieldChecklistShotListBy'),
+    fieldChecklistPreproductionCreativeBy: document.getElementById('fieldChecklistPreproductionCreativeBy'),
+    fieldChecklistCallSheetUrl: document.getElementById('fieldChecklistCallSheetUrl'),
+    fieldChecklistRiskAssessmentUrl: document.getElementById('fieldChecklistRiskAssessmentUrl'),
+    fieldChecklistShotListUrl: document.getElementById('fieldChecklistShotListUrl'),
+    fieldChecklistPreproductionCreativeUrl: document.getElementById('fieldChecklistPreproductionCreativeUrl'),
+    fieldChecklistCallSheetUrlLink: document.getElementById('fieldChecklistCallSheetUrlLink'),
+    fieldChecklistRiskAssessmentUrlLink: document.getElementById('fieldChecklistRiskAssessmentUrlLink'),
+    fieldChecklistShotListUrlLink: document.getElementById('fieldChecklistShotListUrlLink'),
+    fieldChecklistPreproductionCreativeUrlLink: document.getElementById('fieldChecklistPreproductionCreativeUrlLink'),
     formError: document.getElementById('formError'),
     cancelModalBtn: document.getElementById('cancelModalBtn'),
     deleteBookingBtn: document.getElementById('deleteBookingBtn'),
     confirmBookingBtn: document.getElementById('confirmBookingBtn'),
+    unconfirmBookingBtn: document.getElementById('unconfirmBookingBtn'),
     syncResults: document.getElementById('syncResults'),
+    conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
     viewPeopleBtn: document.getElementById('viewPeopleBtn'),
     weekControls: document.getElementById('weekControls'),
@@ -48,6 +82,30 @@
     personEmail: document.getElementById('personEmail'),
     personFormError: document.getElementById('personFormError'),
     peopleTableBody: document.getElementById('peopleTableBody'),
+    viewClientsBtn: document.getElementById('viewClientsBtn'),
+    clientsView: document.getElementById('clientsView'),
+    clientForm: document.getElementById('clientForm'),
+    clientName: document.getElementById('clientName'),
+    clientLogo: document.getElementById('clientLogo'),
+    clientFormError: document.getElementById('clientFormError'),
+    clientsTableBody: document.getElementById('clientsTableBody'),
+    kitUsageTitle: document.getElementById('kitUsageTitle'),
+    kitUsageList: document.getElementById('kitUsageList'),
+    viewKitUsageBtn: document.getElementById('viewKitUsageBtn'),
+    kitUsagePageView: document.getElementById('kitUsagePageView'),
+    kitUsagePrevMonth: document.getElementById('kitUsagePrevMonth'),
+    kitUsageThisMonth: document.getElementById('kitUsageThisMonth'),
+    kitUsageNextMonth: document.getElementById('kitUsageNextMonth'),
+    kitUsagePageMonthLabel: document.getElementById('kitUsagePageMonthLabel'),
+    kitUsagePageSummary: document.getElementById('kitUsagePageSummary'),
+    kitUsagePageTableBody: document.getElementById('kitUsagePageTableBody'),
+    viewBlockedDaysBtn: document.getElementById('viewBlockedDaysBtn'),
+    blockedDaysView: document.getElementById('blockedDaysView'),
+    blockedDayForm: document.getElementById('blockedDayForm'),
+    blockedDayDate: document.getElementById('blockedDayDate'),
+    blockedDayReason: document.getElementById('blockedDayReason'),
+    blockedDayFormError: document.getElementById('blockedDayFormError'),
+    blockedDaysTableBody: document.getElementById('blockedDaysTableBody'),
     authGate: document.getElementById('authGate'),
     appRoot: document.getElementById('appRoot'),
     googleSignInBtn: document.getElementById('googleSignInBtn'),
@@ -97,8 +155,21 @@
     return json.data;
   }
 
+  async function apiPostForm(path, formData) {
+    const res = await fetch(path, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'fetch' },
+      body: formData,
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Request failed');
+    return json.data;
+  }
+
   function buildWeekSkeleton() {
     el.weekGrid.innerHTML = '';
+    const todayIso = isoDate(new Date());
 
     const gutterHeader = document.createElement('div');
     gutterHeader.className = 'time-gutter-header';
@@ -106,9 +177,26 @@
 
     for (let i = 0; i < 5; i++) {
       const d = addDays(state.weekStart, i);
+      const dIso = isoDate(d);
+      const blocked = state.blockedDaysByDate[dIso];
       const header = document.createElement('div');
-      header.className = 'day-header';
+      header.className = 'day-header' + (dIso === todayIso ? ' is-today' : '') + (blocked ? ' is-blocked' : '');
       header.innerHTML = `${DAY_NAMES[i]}<span class="day-date">${d.getDate()}</span>`;
+
+      const lockBtn = document.createElement('button');
+      lockBtn.type = 'button';
+      lockBtn.className = 'day-lock-btn';
+      lockBtn.title = blocked ? `Blocked: ${blocked.reason || 'no reason given'} (click to unblock)` : 'Block this day for bookings';
+      lockBtn.textContent = blocked ? '🔒' : '🔓';
+      lockBtn.addEventListener('click', (e) => onDayLockClick(dIso, e));
+      header.appendChild(lockBtn);
+      if (blocked) {
+        const reasonEl = document.createElement('span');
+        reasonEl.className = 'day-blocked-reason';
+        reasonEl.textContent = blocked.reason || 'Blocked';
+        header.appendChild(reasonEl);
+      }
+
       el.weekGrid.appendChild(header);
     }
 
@@ -126,7 +214,9 @@
 
     for (let i = 0; i < 5; i++) {
       const col = document.createElement('div');
-      col.className = 'day-column';
+      const colDate = addDays(state.weekStart, i);
+      const colIso = isoDate(colDate);
+      col.className = 'day-column' + (colIso === todayIso ? ' is-today' : '') + (state.blockedDaysByDate[colIso] ? ' is-blocked' : '');
       col.dataset.dayIndex = String(i);
       col.style.height = `${(GRID_END_HOUR - GRID_START_HOUR) * PX_PER_HOUR}px`;
       col.addEventListener('click', (e) => {
@@ -140,6 +230,58 @@
     const hours = dateObj.getHours() + dateObj.getMinutes() / 60;
     const clamped = Math.min(Math.max(hours, GRID_START_HOUR), GRID_END_HOUR);
     return (clamped - GRID_START_HOUR) * PX_PER_HOUR;
+  }
+
+  function buildBlockChecklistRow(booking, fieldKey, label) {
+    const row = document.createElement('label');
+    row.className = 'b-checklist-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !!booking[fieldKey];
+    checkbox.addEventListener('click', (e) => e.stopPropagation());
+    checkbox.addEventListener('change', async () => {
+      checkbox.disabled = true;
+      try {
+        await apiPost(`api/bookings_update.php?id=${booking.id}`, { [fieldKey]: checkbox.checked });
+        await loadWeek();
+      } catch (err) {
+        checkbox.checked = !checkbox.checked;
+        checkbox.disabled = false;
+        alert(err.message);
+      }
+    });
+
+    const labelText = document.createElement('span');
+    labelText.className = 'b-checklist-label';
+    labelText.textContent = label;
+
+    row.appendChild(checkbox);
+    row.appendChild(labelText);
+
+    const url = booking[fieldKey + '_url'];
+    if (url) {
+      const linkEl = document.createElement('a');
+      linkEl.className = 'b-checklist-link';
+      linkEl.href = url;
+      linkEl.target = '_blank';
+      linkEl.rel = 'noopener';
+      linkEl.title = 'Open in Google Drive';
+      linkEl.textContent = '🔗';
+      linkEl.addEventListener('click', (e) => e.stopPropagation());
+      row.appendChild(linkEl);
+    }
+
+    const byName = booking[fieldKey] ? booking[fieldKey + '_by'] : null;
+    if (byName) {
+      const byEl = document.createElement('span');
+      byEl.className = 'b-checklist-by';
+      byEl.style.backgroundColor = colorForName(byName);
+      byEl.textContent = initialsForName(byName);
+      byEl.title = byName;
+      row.appendChild(byEl);
+    }
+    return row;
   }
 
   function renderBookings() {
@@ -157,7 +299,7 @@
       const height = Math.max(bottom - top, 20);
 
       const block = document.createElement('div');
-      block.className = `booking-block status-${booking.status}`;
+      block.className = `booking-block status-${booking.status}` + (booking.client_logo_path ? ' has-logo' : '');
       block.style.top = `${top}px`;
       block.style.height = `${height}px`;
 
@@ -174,9 +316,61 @@
       const names = booking.attendees.map((a) => a.name).join(', ');
       metaEl.textContent = `${formatTime(start)}–${formatTime(end)}${names ? ' · ' + names : ''}`;
 
+      const prepDone = CHECKLIST_ITEMS.filter((item) => booking['checklist_' + item.key]).length;
+      const prepEl = document.createElement('span');
+      prepEl.className = 'b-prep' + (prepDone === CHECKLIST_ITEMS.length ? ' complete' : '');
+      prepEl.textContent = `Prep ${prepDone}/${CHECKLIST_ITEMS.length}`;
+
+      let noSyncEl = null;
+      if (booking.skip_calendar_sync) {
+        noSyncEl = document.createElement('span');
+        noSyncEl.className = 'b-no-sync';
+        noSyncEl.textContent = '🔕 Not synced';
+        noSyncEl.title = 'This booking is not pushed to Google Calendar (already added manually)';
+      }
+
+      const checklistEl = document.createElement('div');
+      checklistEl.className = 'b-checklist';
+      checklistEl.addEventListener('click', (e) => e.stopPropagation());
+      const checklistHeader = document.createElement('div');
+      checklistHeader.className = 'b-checklist-header';
+      checklistHeader.textContent = 'Pre-production checklist';
+      checklistEl.appendChild(checklistHeader);
+      for (const item of CHECKLIST_ITEMS) {
+        checklistEl.appendChild(buildBlockChecklistRow(booking, 'checklist_' + item.key, item.label));
+      }
+
+      const attendeesEl = document.createElement('div');
+      attendeesEl.className = 'b-attendees';
+      for (const attendee of booking.attendees) {
+        attendeesEl.appendChild(buildAvatarEl(attendee.name, 'avatar-lg', attendee.id));
+      }
+
+      let clientLogoEl = null;
+      if (booking.client_logo_path) {
+        clientLogoEl = document.createElement('img');
+        clientLogoEl.className = 'b-client-logo';
+        clientLogoEl.src = booking.client_logo_path;
+        clientLogoEl.alt = booking.client_name || 'Client';
+        clientLogoEl.title = booking.client_name || '';
+      }
+
+      let bookedByEl = null;
+      if (booking.created_by_name) {
+        bookedByEl = document.createElement('span');
+        bookedByEl.className = 'b-booked-by';
+        bookedByEl.textContent = `Booked by ${booking.created_by_name}`;
+      }
+
       block.appendChild(statusEl);
       block.appendChild(titleEl);
       block.appendChild(metaEl);
+      block.appendChild(prepEl);
+      if (noSyncEl) block.appendChild(noSyncEl);
+      block.appendChild(checklistEl);
+      block.appendChild(attendeesEl);
+      if (clientLogoEl) block.appendChild(clientLogoEl);
+      if (bookedByEl) block.appendChild(bookedByEl);
       block.addEventListener('click', (e) => {
         e.stopPropagation();
         openEditModal(booking);
@@ -212,19 +406,48 @@
     const confirmed = state.bookings.filter((b) => b.status === 'confirmed').length;
     const pencil = total - confirmed;
     if (total === 0) {
-      el.weekTally.textContent = 'No bookings';
+      el.weekTally.textContent = 'Nothing booked this week yet — grab a pencil';
     } else {
-      el.weekTally.textContent = `${total} booking${total === 1 ? '' : 's'} · ${pencil} pencil · ${confirmed} confirmed`;
+      el.weekTally.textContent = `${total} booking${total === 1 ? '' : 's'} this week · ${pencil} pencil · ${confirmed} confirmed`;
     }
   }
 
-  const AVATAR_COLORS = ['#e07a5f', '#3d5a80', '#81b29a', '#f2cc8f', '#9b5de5', '#00a896', '#d64550', '#4a6fa5'];
+  const AVATAR_COLORS = [
+    '#e07a5f', '#3d5a80', '#81b29a', '#c08a2e', '#9b5de5', '#00a896', '#d64550', '#4a6fa5',
+    '#2a9d8f', '#e76f51', '#6d597a', '#457b9d', '#b56576', '#588157', '#bc6c25', '#7209b7',
+  ];
+  const personColorById = {};
+
+  async function loadPersonColors() {
+    const all = await apiGet('api/people_list.php?include_inactive=1');
+    const sorted = all.slice().sort((a, b) => a.id - b.id);
+    sorted.forEach((p, i) => {
+      personColorById[p.id] = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    });
+  }
+
+  function colorForPerson(id, name) {
+    if (id != null && personColorById[id]) return personColorById[id];
+    return colorForName(name);
+  }
 
   function initialsForName(name) {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function setChecklistBy(el, name) {
+    if (name) {
+      el.textContent = initialsForName(name);
+      el.title = name;
+      el.classList.remove('hidden');
+    } else {
+      el.textContent = '';
+      el.removeAttribute('title');
+      el.classList.add('hidden');
+    }
   }
 
   function colorForName(name) {
@@ -260,7 +483,7 @@
 
       const avatar = document.createElement('span');
       avatar.className = 'psr-avatar';
-      avatar.style.backgroundColor = colorForName(person.name);
+      avatar.style.backgroundColor = colorForPerson(person.id, person.name);
       avatar.textContent = initialsForName(person.name);
 
       const info = document.createElement('span');
@@ -297,6 +520,102 @@
     renderBookings();
     updateWeekTally();
     updateWeekPeopleSummary();
+    await loadKitUsage();
+  }
+
+  const KIT_LABELS = { fuzzy_duck: 'Fuzzy Duck kit', mark: "Mark's kit", tom: "Tom's kit" };
+
+  async function loadKitUsage() {
+    const monthDate = addDays(state.weekStart, 3); // mid-week, avoids month-boundary ambiguity
+    const monthStr = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    const data = await apiGet(`api/kit_usage.php?month=${monthStr}`);
+    const monthLabel = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    el.kitUsageTitle.textContent = `Kit usage · ${monthLabel}`;
+    el.kitUsageList.innerHTML = '';
+    for (const key of ['fuzzy_duck', 'mark', 'tom']) {
+      const row = document.createElement('div');
+      row.className = 'kit-usage-row';
+      const label = document.createElement('span');
+      label.textContent = KIT_LABELS[key];
+      const count = document.createElement('span');
+      count.className = 'kit-usage-count';
+      count.textContent = `${data.counts[key] || 0} day${data.counts[key] === 1 ? '' : 's'}`;
+      row.appendChild(label);
+      row.appendChild(count);
+      el.kitUsageList.appendChild(row);
+    }
+  }
+
+  function currentMonthStr(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  async function loadKitUsagePage() {
+    const monthStr = state.kitUsagePageMonth || currentMonthStr(new Date());
+    state.kitUsagePageMonth = monthStr;
+    const data = await apiGet(`api/kit_usage.php?month=${monthStr}`);
+    const monthDate = new Date(monthStr + '-01T00:00:00');
+    el.kitUsagePageMonthLabel.textContent = monthDate.toLocaleDateString([], { month: 'long', year: 'numeric' });
+
+    el.kitUsagePageSummary.innerHTML = '';
+    for (const key of ['fuzzy_duck', 'mark', 'tom']) {
+      const tile = document.createElement('div');
+      tile.className = 'kupsummary-tile';
+      const count = document.createElement('span');
+      count.className = 'kupsummary-count';
+      count.textContent = data.counts[key] || 0;
+      const label = document.createElement('span');
+      label.className = 'kupsummary-label';
+      label.textContent = `${KIT_LABELS[key]} — days`;
+      tile.appendChild(count);
+      tile.appendChild(label);
+      el.kitUsagePageSummary.appendChild(tile);
+    }
+
+    el.kitUsagePageTableBody.innerHTML = '';
+    if (data.entries.length === 0) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.textContent = 'No bookings this month.';
+      cell.style.color = 'var(--muted)';
+      row.appendChild(cell);
+      el.kitUsagePageTableBody.appendChild(row);
+      return;
+    }
+    for (const entry of data.entries) {
+      const row = document.createElement('tr');
+      const start = new Date(entry.start_datetime.replace(' ', 'T'));
+
+      const dateCell = document.createElement('td');
+      dateCell.textContent = start.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+
+      const titleCell = document.createElement('td');
+      titleCell.textContent = entry.title;
+
+      const kitCell = document.createElement('td');
+      kitCell.textContent = KIT_LABELS[entry.kit_source] || entry.kit_source;
+
+      const statusCell = document.createElement('td');
+      const pill = document.createElement('span');
+      pill.className = `status-pill ${entry.status === 'confirmed' ? 'active' : 'inactive'}`;
+      pill.textContent = entry.status === 'confirmed' ? 'Confirmed' : 'Pencil';
+      statusCell.appendChild(pill);
+
+      row.appendChild(dateCell);
+      row.appendChild(titleCell);
+      row.appendChild(kitCell);
+      row.appendChild(statusCell);
+      el.kitUsagePageTableBody.appendChild(row);
+    }
+  }
+
+  function shiftKitUsagePageMonth(delta) {
+    const monthStr = state.kitUsagePageMonth || currentMonthStr(new Date());
+    const d = new Date(monthStr + '-01T00:00:00');
+    d.setMonth(d.getMonth() + delta);
+    state.kitUsagePageMonth = currentMonthStr(d);
+    loadKitUsagePage();
   }
 
   async function loadPeople() {
@@ -311,8 +630,202 @@
     if (state.bookings.length || state.people.length) updateWeekPeopleSummary();
   }
 
+  async function loadClients() {
+    state.clients = await apiGet('api/clients_list.php');
+    el.fieldClient.innerHTML = '';
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = '— None —';
+    el.fieldClient.appendChild(noneOpt);
+    for (const c of state.clients) {
+      const opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = c.name;
+      el.fieldClient.appendChild(opt);
+    }
+  }
+
+  async function loadBlockedDays() {
+    const rows = await apiGet('api/blocked_days_list.php');
+    state.blockedDaysByDate = {};
+    for (const row of rows) {
+      state.blockedDaysByDate[row.day] = row;
+    }
+  }
+
+  async function onDayLockClick(dateIso, e) {
+    e.stopPropagation();
+    const existing = state.blockedDaysByDate[dateIso];
+    if (existing) {
+      if (!confirm(`Unblock ${dateIso}? (${existing.reason || 'no reason given'})`)) return;
+      await apiPost(`api/blocked_days_delete.php?id=${existing.id}`);
+    } else {
+      const reason = prompt(`Block ${dateIso} for bookings — reason (e.g. "PAT testing, kit in office"):`);
+      if (reason === null) return;
+      try {
+        await apiPost('api/blocked_days_create.php', { day: dateIso, reason });
+      } catch (err) {
+        alert(err.message);
+        return;
+      }
+    }
+    await loadBlockedDays();
+    await loadWeek();
+  }
+
+  async function loadBlockedDaysTable() {
+    const rows = await apiGet('api/blocked_days_list.php');
+    el.blockedDaysTableBody.innerHTML = '';
+    if (rows.length === 0) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 3;
+      cell.textContent = 'No blocked days.';
+      cell.style.color = 'var(--muted)';
+      row.appendChild(cell);
+      el.blockedDaysTableBody.appendChild(row);
+      return;
+    }
+    for (const bd of rows) {
+      const row = document.createElement('tr');
+
+      const dateCell = document.createElement('td');
+      const d = new Date(bd.day + 'T00:00:00');
+      dateCell.textContent = d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+      const reasonCell = document.createElement('td');
+      reasonCell.textContent = bd.reason || '';
+
+      const actionsCell = document.createElement('td');
+      actionsCell.className = 'actions';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Unblock';
+      removeBtn.addEventListener('click', async () => {
+        await apiPost(`api/blocked_days_delete.php?id=${bd.id}`);
+        await loadBlockedDays();
+        await loadBlockedDaysTable();
+        await loadWeek();
+      });
+      actionsCell.appendChild(removeBtn);
+
+      row.appendChild(dateCell);
+      row.appendChild(reasonCell);
+      row.appendChild(actionsCell);
+      el.blockedDaysTableBody.appendChild(row);
+    }
+  }
+
+  function hideBlockedDayFormError() {
+    el.blockedDayFormError.classList.add('hidden');
+  }
+
+  function showBlockedDayFormError(message) {
+    el.blockedDayFormError.textContent = message;
+    el.blockedDayFormError.classList.remove('hidden');
+  }
+
+  async function onBlockedDayFormSubmit(e) {
+    e.preventDefault();
+    hideBlockedDayFormError();
+    try {
+      await apiPost('api/blocked_days_create.php', {
+        day: el.blockedDayDate.value,
+        reason: el.blockedDayReason.value.trim(),
+      });
+      el.blockedDayForm.reset();
+      await loadBlockedDays();
+      await loadBlockedDaysTable();
+      await loadWeek();
+    } catch (err) {
+      showBlockedDayFormError(err.message);
+    }
+  }
+
   function onDayColumnClick(dayIndex) {
-    openAddModal(addDays(state.weekStart, dayIndex));
+    const date = addDays(state.weekStart, dayIndex);
+    if (state.blockedDaysByDate[isoDate(date)]) {
+      const reason = state.blockedDaysByDate[isoDate(date)].reason;
+      alert(`This day is blocked for bookings${reason ? ': ' + reason : ''}.`);
+      return;
+    }
+    openAddModal(date);
+  }
+
+  function updateLocationMapsLink() {
+    const value = el.fieldLocation.value.trim();
+    if (value) {
+      el.fieldLocationMapsLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(value);
+      el.fieldLocationMapsLink.classList.remove('hidden');
+    } else {
+      el.fieldLocationMapsLink.classList.add('hidden');
+    }
+  }
+
+  function updateWhat3WordsLink() {
+    const value = el.fieldWhat3Words.value.trim().replace(/^\/+/, '');
+    if (value) {
+      el.fieldWhat3WordsLink.href = 'https://what3words.com/' + encodeURIComponent(value);
+      el.fieldWhat3WordsLink.classList.remove('hidden');
+    } else {
+      el.fieldWhat3WordsLink.classList.add('hidden');
+    }
+  }
+
+  function updateChecklistUrlLink(item) {
+    const input = el['fieldChecklist' + item.elKey + 'Url'];
+    const link = el['fieldChecklist' + item.elKey + 'UrlLink'];
+    const value = input.value.trim();
+    if (value) {
+      link.href = value;
+      link.classList.remove('hidden');
+    } else {
+      link.classList.add('hidden');
+    }
+  }
+
+  let conflictCheckTimer = null;
+  function scheduleConflictCheck() {
+    clearTimeout(conflictCheckTimer);
+    conflictCheckTimer = setTimeout(checkForConflicts, 350);
+  }
+
+  async function checkForConflicts() {
+    const attendeeIds = Array.from(el.fieldAttendees.selectedOptions).map((o) => Number(o.value));
+    if (attendeeIds.length === 0 || !el.fieldDate.value || !el.fieldStart.value || !el.fieldEnd.value) {
+      el.conflictWarning.classList.add('hidden');
+      return;
+    }
+    const payload = {
+      start_datetime: `${el.fieldDate.value}T${el.fieldStart.value}`,
+      end_datetime: `${el.fieldDate.value}T${el.fieldEnd.value}`,
+      attendee_ids: attendeeIds,
+      exclude_booking_id: state.editingId,
+    };
+    let data;
+    try {
+      data = await apiPost('api/check_conflicts.php', payload);
+    } catch (err) {
+      return; // silent — this is a convenience check, not critical path
+    }
+    if (!data.conflicts.length) {
+      el.conflictWarning.classList.add('hidden');
+      return;
+    }
+    el.conflictWarning.innerHTML = '';
+    const title = document.createElement('span');
+    title.className = 'cw-title';
+    title.textContent = `Possible double-booking (${data.conflicts.length}):`;
+    el.conflictWarning.appendChild(title);
+    for (const c of data.conflicts) {
+      const start = new Date(c.start_datetime.replace(' ', 'T'));
+      const end = new Date(c.end_datetime.replace(' ', 'T'));
+      const item = document.createElement('span');
+      item.className = 'cw-item';
+      item.textContent = `${c.person_name} is already on "${c.booking_title}" ${formatTime(start)}–${formatTime(end)}`;
+      el.conflictWarning.appendChild(item);
+    }
+    el.conflictWarning.classList.remove('hidden');
   }
 
   function openAddModal(date) {
@@ -322,10 +835,23 @@
     el.fieldDate.value = isoDate(date);
     el.fieldStart.value = '09:00';
     el.fieldEnd.value = '17:00';
+    el.fieldClient.value = '';
+    el.fieldKitSource.value = 'fuzzy_duck';
+    updateLocationMapsLink();
+    updateWhat3WordsLink();
+    for (const item of CHECKLIST_ITEMS) {
+      el['fieldChecklist' + item.elKey].checked = false;
+      el['fieldChecklist' + item.elKey + 'Url'].value = '';
+      setChecklistBy(el['fieldChecklist' + item.elKey + 'By'], null);
+      updateChecklistUrlLink(item);
+    }
+    el.fieldSkipCalendarSync.checked = false;
     el.deleteBookingBtn.classList.add('hidden');
     el.confirmBookingBtn.classList.add('hidden');
+    el.unconfirmBookingBtn.classList.add('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
+    el.conflictWarning.classList.add('hidden');
     el.modalBackdrop.classList.remove('hidden');
   }
 
@@ -339,7 +865,20 @@
     el.fieldStart.value = pad2(start.getHours()) + ':' + pad2(start.getMinutes());
     el.fieldEnd.value = pad2(end.getHours()) + ':' + pad2(end.getMinutes());
     el.fieldLocation.value = booking.location || '';
+    el.fieldWhat3Words.value = booking.what3words || '';
+    el.fieldClient.value = booking.client_id ? String(booking.client_id) : '';
+    el.fieldKitSource.value = booking.kit_source || 'fuzzy_duck';
+    updateLocationMapsLink();
+    updateWhat3WordsLink();
     el.fieldNotes.value = booking.notes || '';
+    for (const item of CHECKLIST_ITEMS) {
+      const done = !!booking['checklist_' + item.key];
+      el['fieldChecklist' + item.elKey].checked = done;
+      el['fieldChecklist' + item.elKey + 'Url'].value = booking['checklist_' + item.key + '_url'] || '';
+      setChecklistBy(el['fieldChecklist' + item.elKey + 'By'], done ? booking['checklist_' + item.key + '_by'] : null);
+      updateChecklistUrlLink(item);
+    }
+    el.fieldSkipCalendarSync.checked = !!booking.skip_calendar_sync;
     const attendeeIds = new Set(booking.attendees.map((a) => a.id));
     for (const opt of el.fieldAttendees.options) {
       opt.selected = attendeeIds.has(Number(opt.value));
@@ -347,9 +886,12 @@
     el.deleteBookingBtn.classList.remove('hidden');
     el.deleteBookingBtn.textContent = booking.status === 'confirmed' ? 'Cancel booking' : 'Delete';
     el.confirmBookingBtn.classList.toggle('hidden', booking.status !== 'pencil');
+    el.unconfirmBookingBtn.classList.toggle('hidden', booking.status !== 'confirmed');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
+    el.conflictWarning.classList.add('hidden');
     el.modalBackdrop.classList.remove('hidden');
+    scheduleConflictCheck();
   }
 
   function closeModal() {
@@ -374,11 +916,19 @@
     const payload = {
       title: el.fieldTitle.value.trim(),
       location: el.fieldLocation.value.trim(),
+      what3words: el.fieldWhat3Words.value.trim(),
+      client_id: el.fieldClient.value ? Number(el.fieldClient.value) : null,
+      kit_source: el.fieldKitSource.value,
       notes: el.fieldNotes.value.trim(),
       start_datetime: `${el.fieldDate.value}T${el.fieldStart.value}`,
       end_datetime: `${el.fieldDate.value}T${el.fieldEnd.value}`,
       attendee_ids: attendeeIds,
+      skip_calendar_sync: el.fieldSkipCalendarSync.checked,
     };
+    for (const item of CHECKLIST_ITEMS) {
+      payload['checklist_' + item.key] = el['fieldChecklist' + item.elKey].checked;
+      payload['checklist_' + item.key + '_url'] = el['fieldChecklist' + item.elKey + 'Url'].value.trim();
+    }
 
     try {
       let data;
@@ -431,6 +981,22 @@
     }
   }
 
+  async function onUnconfirmClick() {
+    if (!state.editingId) return;
+    el.unconfirmBookingBtn.disabled = true;
+    try {
+      const data = await apiPost(`api/bookings_unconfirm.php?id=${state.editingId}`);
+      await loadWeek();
+      const updated = state.bookings.find((b) => b.id === state.editingId);
+      if (updated) openEditModal(updated);
+      showSyncResults(data.results);
+    } catch (err) {
+      showFormError(err.message);
+    } finally {
+      el.unconfirmBookingBtn.disabled = false;
+    }
+  }
+
   async function onDeleteClick() {
     if (!state.editingId) return;
     if (!confirm('Remove this booking?')) return;
@@ -445,14 +1011,27 @@
 
   function switchView(view) {
     const isWeek = view === 'week';
+    const isPeople = view === 'people';
+    const isClients = view === 'clients';
+    const isKitUsage = view === 'kitUsage';
+    const isBlockedDays = view === 'blockedDays';
     el.viewWeekBtn.classList.toggle('active', isWeek);
-    el.viewPeopleBtn.classList.toggle('active', !isWeek);
-    el.weekGrid.classList.toggle('hidden', !isWeek);
+    el.viewPeopleBtn.classList.toggle('active', isPeople);
+    el.viewClientsBtn.classList.toggle('active', isClients);
+    el.viewKitUsageBtn.classList.toggle('active', isKitUsage);
+    el.viewBlockedDaysBtn.classList.toggle('active', isBlockedDays);
+    el.weekBody.classList.toggle('hidden', !isWeek);
     el.weekControls.classList.toggle('hidden', !isWeek);
     el.weekLegend.classList.toggle('hidden', !isWeek);
     el.addBookingBtn.classList.toggle('hidden', !isWeek);
-    el.peopleView.classList.toggle('hidden', isWeek);
-    if (!isWeek) loadPeopleTable();
+    el.peopleView.classList.toggle('hidden', !isPeople);
+    el.clientsView.classList.toggle('hidden', !isClients);
+    el.kitUsagePageView.classList.toggle('hidden', !isKitUsage);
+    el.blockedDaysView.classList.toggle('hidden', !isBlockedDays);
+    if (isPeople) loadPeopleTable();
+    if (isClients) loadClientsTable();
+    if (isKitUsage) loadKitUsagePage();
+    if (isBlockedDays) loadBlockedDaysTable();
   }
 
   function hidePersonFormError() {
@@ -472,11 +1051,21 @@
     }
   }
 
+  function buildAvatarEl(name, extraClass, personId) {
+    const el = document.createElement('span');
+    el.className = 'avatar-circle' + (extraClass ? ' ' + extraClass : '');
+    el.style.backgroundColor = colorForPerson(personId, name);
+    el.textContent = initialsForName(name);
+    return el;
+  }
+
   function buildPersonRow(person) {
     const row = document.createElement('tr');
 
     const nameCell = document.createElement('td');
-    nameCell.textContent = person.name;
+    nameCell.className = 'name-cell';
+    nameCell.appendChild(buildAvatarEl(person.name, 'avatar-sm', person.id));
+    nameCell.appendChild(document.createTextNode(person.name));
 
     const roleCell = document.createElement('td');
     roleCell.textContent = person.role || '';
@@ -505,6 +1094,7 @@
       await apiPost(`api/people_deactivate.php?id=${person.id}`, { active: !person.active });
       await loadPeopleTable();
       await loadPeople();
+      await loadPersonColors();
     });
 
     actionsCell.appendChild(editBtn);
@@ -561,6 +1151,7 @@
         });
         await loadPeopleTable();
         await loadPeople();
+        await loadPersonColors();
       } catch (err) {
         alert(err.message);
       }
@@ -593,13 +1184,181 @@
       el.personForm.reset();
       await loadPeopleTable();
       await loadPeople();
+      await loadPersonColors();
     } catch (err) {
       showPersonFormError(err.message);
     }
   }
 
+  function hideClientFormError() {
+    el.clientFormError.classList.add('hidden');
+  }
+
+  function showClientFormError(message) {
+    el.clientFormError.textContent = message;
+    el.clientFormError.classList.remove('hidden');
+  }
+
+  async function loadClientsTable() {
+    const clients = await apiGet('api/clients_list.php?include_inactive=1');
+    el.clientsTableBody.innerHTML = '';
+    for (const client of clients) {
+      el.clientsTableBody.appendChild(buildClientRow(client));
+    }
+  }
+
+  function buildClientLogoEl(client) {
+    if (client.logo_path) {
+      const img = document.createElement('img');
+      img.className = 'client-logo-thumb';
+      img.src = client.logo_path;
+      img.alt = client.name;
+      return img;
+    }
+    const placeholder = document.createElement('span');
+    placeholder.className = 'client-logo-placeholder';
+    placeholder.textContent = 'No logo';
+    return placeholder;
+  }
+
+  function buildClientRow(client) {
+    const row = document.createElement('tr');
+
+    const logoCell = document.createElement('td');
+    logoCell.appendChild(buildClientLogoEl(client));
+
+    const nameCell = document.createElement('td');
+    nameCell.textContent = client.name;
+
+    const statusCell = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = `status-pill ${client.active ? 'active' : 'inactive'}`;
+    pill.textContent = client.active ? 'Active' : 'Inactive';
+    statusCell.appendChild(pill);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => enterClientEditMode(row, client));
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = client.active ? 'Deactivate' : 'Reactivate';
+    toggleBtn.addEventListener('click', async () => {
+      await apiPost(`api/clients_deactivate.php?id=${client.id}`, { active: !client.active });
+      await loadClientsTable();
+      await loadClients();
+    });
+
+    actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(toggleBtn);
+
+    row.appendChild(logoCell);
+    row.appendChild(nameCell);
+    row.appendChild(statusCell);
+    row.appendChild(actionsCell);
+    return row;
+  }
+
+  function enterClientEditMode(row, client) {
+    row.innerHTML = '';
+
+    const logoCell = document.createElement('td');
+    logoCell.appendChild(buildClientLogoEl(client));
+    const logoInput = document.createElement('input');
+    logoInput.type = 'file';
+    logoInput.accept = 'image/png,image/jpeg,image/gif,image/webp';
+    logoInput.style.marginTop = '4px';
+    logoInput.style.width = '110px';
+    logoCell.appendChild(logoInput);
+
+    const nameCell = document.createElement('td');
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = client.name;
+    nameCell.appendChild(nameInput);
+
+    const statusCell = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = `status-pill ${client.active ? 'active' : 'inactive'}`;
+    pill.textContent = client.active ? 'Active' : 'Inactive';
+    statusCell.appendChild(pill);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'primary';
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', async () => {
+      try {
+        const formData = new FormData();
+        formData.append('name', nameInput.value.trim());
+        if (logoInput.files[0]) formData.append('logo', logoInput.files[0]);
+        await apiPostForm(`api/clients_update.php?id=${client.id}`, formData);
+        await loadClientsTable();
+        await loadClients();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => loadClientsTable());
+
+    actionsCell.appendChild(saveBtn);
+    actionsCell.appendChild(cancelBtn);
+
+    row.appendChild(logoCell);
+    row.appendChild(nameCell);
+    row.appendChild(statusCell);
+    row.appendChild(actionsCell);
+  }
+
+  async function onClientFormSubmit(e) {
+    e.preventDefault();
+    hideClientFormError();
+    try {
+      const formData = new FormData();
+      formData.append('name', el.clientName.value.trim());
+      if (el.clientLogo.files[0]) formData.append('logo', el.clientLogo.files[0]);
+      await apiPostForm('api/clients_create.php', formData);
+      el.clientForm.reset();
+      await loadClientsTable();
+      await loadClients();
+    } catch (err) {
+      showClientFormError(err.message);
+    }
+  }
+
   el.viewWeekBtn.addEventListener('click', () => switchView('week'));
   el.viewPeopleBtn.addEventListener('click', () => switchView('people'));
+  el.viewClientsBtn.addEventListener('click', () => switchView('clients'));
+  el.viewKitUsageBtn.addEventListener('click', () => switchView('kitUsage'));
+  el.viewBlockedDaysBtn.addEventListener('click', () => switchView('blockedDays'));
+  el.kitUsagePrevMonth.addEventListener('click', () => shiftKitUsagePageMonth(-1));
+  el.kitUsageNextMonth.addEventListener('click', () => shiftKitUsagePageMonth(1));
+  el.kitUsageThisMonth.addEventListener('click', () => {
+    state.kitUsagePageMonth = currentMonthStr(new Date());
+    loadKitUsagePage();
+  });
+  el.blockedDayForm.addEventListener('submit', onBlockedDayFormSubmit);
+  el.clientForm.addEventListener('submit', onClientFormSubmit);
+  el.fieldLocation.addEventListener('input', updateLocationMapsLink);
+  el.fieldWhat3Words.addEventListener('input', updateWhat3WordsLink);
+  el.fieldDate.addEventListener('input', scheduleConflictCheck);
+  el.fieldStart.addEventListener('input', scheduleConflictCheck);
+  el.fieldEnd.addEventListener('input', scheduleConflictCheck);
+  el.fieldAttendees.addEventListener('change', scheduleConflictCheck);
+  for (const item of CHECKLIST_ITEMS) {
+    el['fieldChecklist' + item.elKey + 'Url'].addEventListener('input', () => updateChecklistUrlLink(item));
+  }
   el.personForm.addEventListener('submit', onPersonFormSubmit);
 
   el.prevWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); loadWeek(); });
@@ -646,6 +1405,9 @@
     el.appRoot.classList.remove('hidden');
     el.currentUserLabel.textContent = user.name || user.email;
     await loadPeople();
+    await loadPersonColors();
+    await loadClients();
+    await loadBlockedDays();
     await loadWeek();
   }
 

@@ -1,5 +1,6 @@
 /vendor/
 /config/config.php
 /config/service-account.json
+/public/uploads/
 .DS_Store
 *.log

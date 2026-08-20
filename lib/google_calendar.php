@@ -82,12 +82,38 @@ final class GoogleCalendarService
     {
         $timezone = app_config()['timezone'];
         $otherNames = array_map(fn($a) => $a['name'], $booking['other_attendees'] ?? []);
-        $description = trim(($booking['notes'] ?? '') . ($otherNames ? "\n\nWith: " . implode(', ', $otherNames) : ''));
+
+        $checklist = [
+            'Call Sheet' => ['done' => !empty($booking['checklist_call_sheet']), 'by' => $booking['checklist_call_sheet_by'] ?? null, 'url' => $booking['checklist_call_sheet_url'] ?? null],
+            'Risk Assessment' => ['done' => !empty($booking['checklist_risk_assessment']), 'by' => $booking['checklist_risk_assessment_by'] ?? null, 'url' => $booking['checklist_risk_assessment_url'] ?? null],
+            'Shot List' => ['done' => !empty($booking['checklist_shot_list']), 'by' => $booking['checklist_shot_list_by'] ?? null, 'url' => $booking['checklist_shot_list_url'] ?? null],
+            'Pre-production creative' => ['done' => !empty($booking['checklist_preproduction_creative']), 'by' => $booking['checklist_preproduction_creative_by'] ?? null, 'url' => $booking['checklist_preproduction_creative_url'] ?? null],
+        ];
+        $checklistLines = [];
+        foreach ($checklist as $label => $item) {
+            $line = ($item['done'] ? '✅' : '⬜') . ' ' . $label;
+            if ($item['done'] && $item['by']) {
+                $line .= ' — ' . $item['by'];
+            }
+            if ($item['url']) {
+                $line .= ' (' . $item['url'] . ')';
+            }
+            $checklistLines[] = $line;
+        }
+
+        $parts = array_filter([
+            $booking['notes'] ?? '',
+            $otherNames ? 'With: ' . implode(', ', $otherNames) : '',
+            "Pre-production checklist:\n" . implode("\n", $checklistLines),
+        ]);
+        $description = implode("\n\n", $parts);
+        $isPencil = ($booking['status'] ?? 'confirmed') === 'pencil';
 
         return [
-            'summary' => 'FUZZY DUCK FILMING: ' . $booking['title'],
+            'summary' => 'FUZZY DUCK FILMING' . ($isPencil ? ' (PENCIL)' : '') . ': ' . $booking['title'],
             'location' => $booking['location'] ?? '',
             'description' => $description,
+            'status' => $isPencil ? 'tentative' : 'confirmed',
             'start' => [
                 'dateTime' => str_replace(' ', 'T', $booking['start_datetime']),
                 'timeZone' => $timezone,
