@@ -1,0 +1,8 @@
+{
+    "name": "filmplan/booking-app",
+    "description": "Internal shoot scheduling tool with Google Calendar sync",
+    "require": {
+        "php": ">=8.1",
+        "google/apiclient": "^2.15"
+    }
+}

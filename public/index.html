@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Film Plan</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <img class="logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+      <h1>Film Plan</h1>
+      <p>Sign in with your Fuzzy Duck Google account to continue.</p>
+      <div id="googleSignInBtn"></div>
+      <p id="authError" class="form-error hidden"></p>
+    </div>
+  </div>
+
+  <div id="appRoot" class="hidden">
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="brand">
+          <img class="logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+          <h1>Film Plan</h1>
+        </div>
+        <nav class="view-nav">
+          <button id="viewWeekBtn" type="button" class="active">Week</button>
+          <button id="viewPeopleBtn" type="button">People</button>
+        </nav>
+        <div id="weekControls" class="week-nav">
+          <button id="prevWeek" type="button" aria-label="Previous week">&larr;</button>
+          <button id="todayBtn" type="button">Today</button>
+          <button id="nextWeek" type="button" aria-label="Next week">&rarr;</button>
+          <span id="weekLabel" class="week-label"></span>
+        </div>
+        <div id="weekLegend" class="legend">
+          <span class="legend-item status-pencil">&#9998; Pencil</span>
+          <span class="legend-item status-confirmed">&#10003; Confirmed</span>
+        </div>
+        <button id="addBookingBtn" type="button" class="primary">+ Add booking</button>
+        <span id="currentUserLabel" class="current-user"></span>
+        <button id="signOutBtn" type="button">Sign out</button>
+      </div>
+      <div class="topbar-sub">
+        <span id="weekTally" class="week-tally"></span>
+      </div>
+    </header>
+
+    <main>
+      <div id="weekBody" class="week-body">
+        <aside id="peopleSummary" class="people-summary">
+          <h3>Shoot days</h3>
+          <div id="peopleSummaryList"></div>
+        </aside>
+        <div id="weekGrid" class="week-grid"></div>
+      </div>
+
+    <section id="peopleView" class="people-view hidden">
+      <h2>Bookable people</h2>
+      <form id="personForm" class="person-form">
+        <input type="text" id="personName" placeholder="Name" required>
+        <input type="email" id="personEmail" placeholder="Email" required>
+        <button type="submit" class="primary">Add person</button>
+      </form>
+      <p id="personFormError" class="form-error hidden"></p>
+      <table class="people-table">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="peopleTableBody"></tbody>
+      </table>
+    </section>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop hidden">
+    <form id="bookingForm" class="modal">
+      <h2 id="modalTitle">New booking</h2>
+
+      <label>
+        Title
+        <input type="text" id="fieldTitle" required>
+      </label>
+
+      <div class="field-row">
+        <label>
+          Date
+          <input type="date" id="fieldDate" required>
+        </label>
+        <label>
+          Start
+          <input type="time" id="fieldStart" required>
+        </label>
+        <label>
+          End
+          <input type="time" id="fieldEnd" required>
+        </label>
+      </div>
+
+      <label>
+        Location
+        <input type="text" id="fieldLocation">
+      </label>
+
+      <label>
+        Attendees
+        <select id="fieldAttendees" multiple size="5"></select>
+      </label>
+
+      <label>
+        Notes
+        <textarea id="fieldNotes" rows="3"></textarea>
+      </label>
+
+      <p id="formError" class="form-error hidden"></p>
+      <div id="syncResults" class="sync-results hidden"></div>
+
+      <div class="modal-actions">
+        <div class="modal-actions-left">
+          <button type="button" id="deleteBookingBtn" class="danger hidden">Delete</button>
+          <button type="button" id="confirmBookingBtn" class="confirm hidden">&#10003; Confirm booking</button>
+        </div>
+        <div class="modal-actions-right">
+          <button type="button" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </div>
+    </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
