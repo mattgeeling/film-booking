@@ -38,6 +38,8 @@
     nextWeek: document.getElementById('nextWeek'),
     todayBtn: document.getElementById('todayBtn'),
     addBookingBtn: document.getElementById('addBookingBtn'),
+    downloadWeekBtn: document.getElementById('downloadWeekBtn'),
+    printHeader: document.getElementById('printHeader'),
     modalBackdrop: document.getElementById('modalBackdrop'),
     bookingForm: document.getElementById('bookingForm'),
     modalTitle: document.getElementById('modalTitle'),
@@ -466,7 +468,9 @@
   function updateWeekLabel() {
     const end = addDays(state.weekStart, 4);
     const fmt = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+    const fmtWithYear = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
     el.weekLabel.textContent = `${fmt(state.weekStart)} – ${fmt(end)}`;
+    el.printHeader.textContent = `Film Plan — Week of ${fmtWithYear(state.weekStart)} – ${fmtWithYear(end)}`;
   }
 
   function updateWeekTally() {
@@ -1275,6 +1279,7 @@
     el.weekControls.classList.toggle('hidden', !isWeek);
     el.weekLegend.classList.toggle('hidden', !isWeek && !isMonth);
     el.addBookingBtn.classList.toggle('hidden', !isWeek && !isMonth);
+    el.downloadWeekBtn.classList.toggle('hidden', !isWeek);
     el.monthView.classList.toggle('hidden', !isMonth);
     el.peopleView.classList.toggle('hidden', !isPeople);
     el.clientsView.classList.toggle('hidden', !isClients);
@@ -1768,6 +1773,7 @@
   el.nextWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); loadWeek(); });
   el.todayBtn.addEventListener('click', () => { state.weekStart = mondayOf(new Date()); loadWeek(); });
   el.addBookingBtn.addEventListener('click', () => openAddModal(new Date()));
+  el.downloadWeekBtn.addEventListener('click', () => window.print());
   el.cancelModalBtn.addEventListener('click', closeModal);
   el.modalBackdrop.addEventListener('click', (e) => { if (e.target === el.modalBackdrop) closeModal(); });
   el.bookingForm.addEventListener('submit', onFormSubmit);

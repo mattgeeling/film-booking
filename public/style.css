@@ -67,6 +67,8 @@ body {
 .topbar-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
   gap: 1.5rem;
   padding: 0.6rem 1.5rem;
 }
@@ -1138,3 +1140,48 @@ main { padding: 1rem 1.5rem 3rem; }
 }
 
 .hidden { display: none !important; }
+
+.print-only { display: none; }
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  body { background: #fff; }
+
+  .topbar, #kitUsagePanel, #modalBackdrop, #peopleSummary {
+    display: none !important;
+  }
+
+  main { padding: 0; }
+
+  .print-only {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .week-body { display: block; }
+
+  .week-grid {
+    border: 1px solid #999;
+    zoom: 0.8;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .day-header.is-today,
+  .booking-block.status-pencil,
+  .booking-block.status-confirmed,
+  .day-unavailable-row,
+  .avatar-circle {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .booking-block { cursor: default; }
+  .day-column:hover { background-color: transparent; }
+}
