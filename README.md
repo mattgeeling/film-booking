@@ -29,10 +29,42 @@ gets its own `config/config.php` created directly on the IONOS server.
 
 ## Status
 
-- **Milestone 1 (done):** week view, pencil bookings (create/edit/cancel), no Google integration yet.
-- **Milestone 2:** people management UI.
-- **Milestone 3:** Google Calendar sync on Confirm.
-- **Milestone 4:** Google Sign-In auth.
-- **Milestone 5:** polish + deploy to IONOS.
+- **Milestone 1 (done):** week view, pencil bookings (create/edit/cancel).
+- **Milestone 2 (done):** people management UI.
+- **Milestone 3 (done):** Google Calendar sync on Confirm.
+- **Milestone 4 (done):** Google Sign-In auth, restricted to the Fuzzy Duck Workspace domain.
+- **Milestone 5 (in progress):** deploy to IONOS.
 
 See `/Users/mattgeeling/.claude/plans/crispy-weaving-backus.md` for the full plan.
+
+## Deployment
+
+Every push to `main` deploys automatically to IONOS via `.github/workflows/deploy.yml`
+(GitHub Actions → FTP). This requires the following **repository secrets**
+(Settings → Secrets and variables → Actions → New repository secret):
+
+| Secret | Value |
+|---|---|
+| `IONOS_FTP_SERVER` | FTP host from the IONOS control panel |
+| `IONOS_FTP_USERNAME` | FTP username |
+| `IONOS_FTP_PASSWORD` | FTP password |
+| `IONOS_FTP_SERVER_DIR` | Target directory on the server (e.g. `/` or `/film-booking/`) |
+| `DB_HOST` | MySQL host from IONOS (often `localhost` or a specific hostname) |
+| `DB_NAME` | MySQL database name |
+| `DB_USER` | MySQL username |
+| `DB_PASS` | MySQL password — avoid single quotes (`'`) in this value |
+| `GOOGLE_OAUTH_CLIENT_ID` | The `....apps.googleusercontent.com` client ID |
+| `WORKSPACE_DOMAIN` | `fuzzyduck.co.uk` |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Paste the **entire contents** of the service account JSON key file |
+
+The workflow writes `config/config.php` and `config/service-account.json` from
+these secrets at deploy time — neither file is ever committed to git.
+
+**One-time manual steps** (not automated):
+1. Create the MySQL database in the IONOS control panel.
+2. Import the schema once via phpMyAdmin: run `db/schema.sql`, then `db/seed.sql`
+   (after replacing the placeholder Tom/Nigel emails, or just add people via
+   the People screen once the app is live).
+3. Confirm HTTPS is active on the domain (required for Google Sign-In).
+4. In Google Cloud Console, add the production domain to the OAuth client's
+   Authorized JavaScript origins (it currently only allows `localhost:8000`).
