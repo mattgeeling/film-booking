@@ -6,7 +6,7 @@ require_login();
 
 $includeInactive = isset($_GET['include_inactive']) && $_GET['include_inactive'] === '1';
 
-$sql = 'SELECT id, name, email, active FROM people';
+$sql = 'SELECT id, name, role, email, active FROM people';
 if (!$includeInactive) {
     $sql .= ' WHERE active = 1';
 }

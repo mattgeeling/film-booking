@@ -6,6 +6,7 @@ require_login();
 
 $body = json_body();
 $name = trim((string) ($body['name'] ?? ''));
+$role = trim((string) ($body['role'] ?? ''));
 $email = trim((string) ($body['email'] ?? ''));
 
 if ($name === '') {
@@ -16,8 +17,8 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    $stmt = db()->prepare('INSERT INTO people (name, email, active) VALUES (:name, :email, 1)');
-    $stmt->execute(['name' => $name, 'email' => $email]);
+    $stmt = db()->prepare('INSERT INTO people (name, role, email, active) VALUES (:name, :role, :email, 1)');
+    $stmt->execute(['name' => $name, 'role' => $role ?: null, 'email' => $email]);
 } catch (PDOException $e) {
     if ($e->getCode() === '23000') {
         json_error('That email is already in the people list');

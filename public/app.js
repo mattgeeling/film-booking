@@ -44,6 +44,7 @@
     peopleView: document.getElementById('peopleView'),
     personForm: document.getElementById('personForm'),
     personName: document.getElementById('personName'),
+    personRole: document.getElementById('personRole'),
     personEmail: document.getElementById('personEmail'),
     personFormError: document.getElementById('personFormError'),
     peopleTableBody: document.getElementById('peopleTableBody'),
@@ -217,6 +218,21 @@
     }
   }
 
+  const AVATAR_COLORS = ['#e07a5f', '#3d5a80', '#81b29a', '#f2cc8f', '#9b5de5', '#00a896', '#d64550', '#4a6fa5'];
+
+  function initialsForName(name) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function colorForName(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+  }
+
   function updateWeekPeopleSummary() {
     const daysByPerson = {};
     for (const booking of state.bookings) {
@@ -242,15 +258,32 @@
       const row = document.createElement('div');
       row.className = 'people-summary-row';
 
+      const avatar = document.createElement('span');
+      avatar.className = 'psr-avatar';
+      avatar.style.backgroundColor = colorForName(person.name);
+      avatar.textContent = initialsForName(person.name);
+
+      const info = document.createElement('span');
+      info.className = 'psr-info';
+
       const name = document.createElement('span');
       name.className = 'psr-name';
       name.textContent = person.name;
+      info.appendChild(name);
+
+      if (person.role) {
+        const role = document.createElement('span');
+        role.className = 'psr-role';
+        role.textContent = person.role;
+        info.appendChild(role);
+      }
 
       const badge = document.createElement('span');
       badge.className = 'psr-count' + (count === 0 ? ' zero' : '');
       badge.textContent = String(count);
 
-      row.appendChild(name);
+      row.appendChild(avatar);
+      row.appendChild(info);
       row.appendChild(badge);
       el.peopleSummaryList.appendChild(row);
     }
@@ -445,6 +478,9 @@
     const nameCell = document.createElement('td');
     nameCell.textContent = person.name;
 
+    const roleCell = document.createElement('td');
+    roleCell.textContent = person.role || '';
+
     const emailCell = document.createElement('td');
     emailCell.textContent = person.email;
 
@@ -475,6 +511,7 @@
     actionsCell.appendChild(toggleBtn);
 
     row.appendChild(nameCell);
+    row.appendChild(roleCell);
     row.appendChild(emailCell);
     row.appendChild(statusCell);
     row.appendChild(actionsCell);
@@ -489,6 +526,12 @@
     nameInput.type = 'text';
     nameInput.value = person.name;
     nameCell.appendChild(nameInput);
+
+    const roleCell = document.createElement('td');
+    const roleInput = document.createElement('input');
+    roleInput.type = 'text';
+    roleInput.value = person.role || '';
+    roleCell.appendChild(roleInput);
 
     const emailCell = document.createElement('td');
     const emailInput = document.createElement('input');
@@ -513,6 +556,7 @@
       try {
         await apiPost(`api/people_update.php?id=${person.id}`, {
           name: nameInput.value.trim(),
+          role: roleInput.value.trim(),
           email: emailInput.value.trim(),
         });
         await loadPeopleTable();
@@ -531,6 +575,7 @@
     actionsCell.appendChild(cancelBtn);
 
     row.appendChild(nameCell);
+    row.appendChild(roleCell);
     row.appendChild(emailCell);
     row.appendChild(statusCell);
     row.appendChild(actionsCell);
@@ -542,6 +587,7 @@
     try {
       await apiPost('api/people_create.php', {
         name: el.personName.value.trim(),
+        role: el.personRole.value.trim(),
         email: el.personEmail.value.trim(),
       });
       el.personForm.reset();

@@ -19,6 +19,7 @@ if (!$person) {
 
 $body = json_body();
 $name = trim((string) ($body['name'] ?? $person['name']));
+$role = trim((string) ($body['role'] ?? ($person['role'] ?? '')));
 $email = trim((string) ($body['email'] ?? $person['email']));
 
 if ($name === '') {
@@ -29,8 +30,8 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    $stmt = $pdo->prepare('UPDATE people SET name = :name, email = :email WHERE id = :id');
-    $stmt->execute(['name' => $name, 'email' => $email, 'id' => $id]);
+    $stmt = $pdo->prepare('UPDATE people SET name = :name, role = :role, email = :email WHERE id = :id');
+    $stmt->execute(['name' => $name, 'role' => $role ?: null, 'email' => $email, 'id' => $id]);
 } catch (PDOException $e) {
     if ($e->getCode() === '23000') {
         json_error('That email is already in the people list');

@@ -62,13 +62,14 @@
       <h2>Bookable people</h2>
       <form id="personForm" class="person-form">
         <input type="text" id="personName" placeholder="Name" required>
+        <input type="text" id="personRole" placeholder="Job title">
         <input type="email" id="personEmail" placeholder="Email" required>
         <button type="submit" class="primary">Add person</button>
       </form>
       <p id="personFormError" class="form-error hidden"></p>
       <table class="people-table">
         <thead>
-          <tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr>
+          <tr><th>Name</th><th>Job title</th><th>Email</th><th>Status</th><th></th></tr>
         </thead>
         <tbody id="peopleTableBody"></tbody>
       </table>
