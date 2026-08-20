@@ -305,100 +305,147 @@
     return row;
   }
 
+  function layoutDayBookings(items) {
+    items.sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs);
+    let columns = [];
+    let cluster = [];
+    let clusterEnd = -Infinity;
+
+    const finalizeCluster = () => {
+      const numCols = columns.length;
+      for (const it of cluster) it.totalCols = numCols;
+    };
+
+    for (const it of items) {
+      if (it.startMs >= clusterEnd) {
+        finalizeCluster();
+        columns = [];
+        cluster = [];
+        clusterEnd = -Infinity;
+      }
+      let col = columns.findIndex((endMs) => endMs <= it.startMs);
+      if (col === -1) {
+        col = columns.length;
+        columns.push(it.endMs);
+      } else {
+        columns[col] = it.endMs;
+      }
+      it.col = col;
+      cluster.push(it);
+      clusterEnd = Math.max(clusterEnd, it.endMs);
+    }
+    finalizeCluster();
+    return items;
+  }
+
   function renderBookings() {
     const columns = el.weekGrid.querySelectorAll('.day-column');
     columns.forEach((c) => { c.querySelectorAll('.booking-block').forEach((b) => b.remove()); });
 
+    const byDay = [[], [], [], [], []];
     for (const booking of applyFilters(state.bookings)) {
       const start = new Date(booking.start_datetime.replace(' ', 'T'));
       const end = new Date(booking.end_datetime.replace(' ', 'T'));
       const dayIndex = dayIndexFor(start);
       if (dayIndex === null) continue;
-
-      const top = timeToOffsetPx(start);
-      const bottom = timeToOffsetPx(end);
-      const height = Math.max(bottom - top, 20);
-
-      const block = document.createElement('div');
-      block.className = `booking-block status-${booking.status}` + (booking.client_logo_path ? ' has-logo' : '');
-      block.style.top = `${top}px`;
-      block.style.height = `${height}px`;
-
-      const statusEl = document.createElement('span');
-      statusEl.className = 'b-status';
-      statusEl.textContent = STATUS_LABELS[booking.status] || booking.status;
-
-      const titleEl = document.createElement('span');
-      titleEl.className = 'b-title';
-      titleEl.textContent = booking.title;
-
-      const metaEl = document.createElement('span');
-      metaEl.className = 'b-meta';
-      const names = booking.attendees.map((a) => a.name).join(', ');
-      metaEl.textContent = `${formatTime(start)}–${formatTime(end)}${names ? ' · ' + names : ''}`;
-
-      const prepDone = CHECKLIST_ITEMS.filter((item) => booking['checklist_' + item.key]).length;
-      const prepEl = document.createElement('span');
-      prepEl.className = 'b-prep' + (prepDone === CHECKLIST_ITEMS.length ? ' complete' : '');
-      prepEl.textContent = `Prep ${prepDone}/${CHECKLIST_ITEMS.length}`;
-
-      let noSyncEl = null;
-      if (booking.skip_calendar_sync) {
-        noSyncEl = document.createElement('span');
-        noSyncEl.className = 'b-no-sync';
-        noSyncEl.textContent = '🔕 Not synced';
-        noSyncEl.title = 'This booking is not pushed to Google Calendar (already added manually)';
-      }
-
-      const checklistEl = document.createElement('div');
-      checklistEl.className = 'b-checklist';
-      checklistEl.addEventListener('click', (e) => e.stopPropagation());
-      const checklistHeader = document.createElement('div');
-      checklistHeader.className = 'b-checklist-header';
-      checklistHeader.textContent = 'Pre-production checklist';
-      checklistEl.appendChild(checklistHeader);
-      for (const item of CHECKLIST_ITEMS) {
-        checklistEl.appendChild(buildBlockChecklistRow(booking, 'checklist_' + item.key, item.label));
-      }
-
-      const attendeesEl = document.createElement('div');
-      attendeesEl.className = 'b-attendees';
-      for (const attendee of booking.attendees) {
-        attendeesEl.appendChild(buildAvatarEl(attendee.name, 'avatar-lg', attendee.id));
-      }
-
-      let clientLogoEl = null;
-      if (booking.client_logo_path) {
-        clientLogoEl = document.createElement('img');
-        clientLogoEl.className = 'b-client-logo';
-        clientLogoEl.src = booking.client_logo_path;
-        clientLogoEl.alt = booking.client_name || 'Client';
-        clientLogoEl.title = booking.client_name || '';
-      }
-
-      let bookedByEl = null;
-      if (booking.created_by_name) {
-        bookedByEl = document.createElement('span');
-        bookedByEl.className = 'b-booked-by';
-        bookedByEl.textContent = `Booked by ${booking.created_by_name}`;
-      }
-
-      block.appendChild(statusEl);
-      block.appendChild(titleEl);
-      block.appendChild(metaEl);
-      block.appendChild(prepEl);
-      if (noSyncEl) block.appendChild(noSyncEl);
-      block.appendChild(checklistEl);
-      block.appendChild(attendeesEl);
-      if (clientLogoEl) block.appendChild(clientLogoEl);
-      if (bookedByEl) block.appendChild(bookedByEl);
-      block.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openEditModal(booking);
-      });
-
-      columns[dayIndex].appendChild(block);
+      byDay[dayIndex].push({ booking, start, end, startMs: start.getTime(), endMs: end.getTime() });
     }
+
+    for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
+      for (const item of layoutDayBookings(byDay[dayIndex])) {
+        renderBookingBlock(item, columns[dayIndex]);
+      }
+    }
+  }
+
+  function renderBookingBlock(layoutItem, columnEl) {
+    const { booking, start, end, col, totalCols } = layoutItem;
+    const top = timeToOffsetPx(start);
+    const bottom = timeToOffsetPx(end);
+    const height = Math.max(bottom - top, 20);
+    const colWidthPct = 100 / totalCols;
+
+    const block = document.createElement('div');
+    block.className = `booking-block status-${booking.status}` + (booking.client_logo_path ? ' has-logo' : '');
+    block.style.top = `${top}px`;
+    block.style.height = `${height}px`;
+    block.style.left = `calc(${col * colWidthPct}% + 4px)`;
+    block.style.width = `calc(${colWidthPct}% - 8px)`;
+
+    const statusEl = document.createElement('span');
+    statusEl.className = 'b-status';
+    statusEl.textContent = STATUS_LABELS[booking.status] || booking.status;
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'b-title';
+    titleEl.textContent = booking.title;
+
+    const metaEl = document.createElement('span');
+    metaEl.className = 'b-meta';
+    const names = booking.attendees.map((a) => a.name).join(', ');
+    metaEl.textContent = `${formatTime(start)}–${formatTime(end)}${names ? ' · ' + names : ''}`;
+
+    const prepDone = CHECKLIST_ITEMS.filter((item) => booking['checklist_' + item.key]).length;
+    const prepEl = document.createElement('span');
+    prepEl.className = 'b-prep' + (prepDone === CHECKLIST_ITEMS.length ? ' complete' : '');
+    prepEl.textContent = `Prep ${prepDone}/${CHECKLIST_ITEMS.length}`;
+
+    let noSyncEl = null;
+    if (booking.skip_calendar_sync) {
+      noSyncEl = document.createElement('span');
+      noSyncEl.className = 'b-no-sync';
+      noSyncEl.textContent = '🔕 Not synced';
+      noSyncEl.title = 'This booking is not pushed to Google Calendar (already added manually)';
+    }
+
+    const checklistEl = document.createElement('div');
+    checklistEl.className = 'b-checklist';
+    checklistEl.addEventListener('click', (e) => e.stopPropagation());
+    const checklistHeader = document.createElement('div');
+    checklistHeader.className = 'b-checklist-header';
+    checklistHeader.textContent = 'Pre-production checklist';
+    checklistEl.appendChild(checklistHeader);
+    for (const item of CHECKLIST_ITEMS) {
+      checklistEl.appendChild(buildBlockChecklistRow(booking, 'checklist_' + item.key, item.label));
+    }
+
+    const attendeesEl = document.createElement('div');
+    attendeesEl.className = 'b-attendees';
+    for (const attendee of booking.attendees) {
+      attendeesEl.appendChild(buildAvatarEl(attendee.name, 'avatar-lg', attendee.id));
+    }
+
+    let clientLogoEl = null;
+    if (booking.client_logo_path) {
+      clientLogoEl = document.createElement('img');
+      clientLogoEl.className = 'b-client-logo';
+      clientLogoEl.src = booking.client_logo_path;
+      clientLogoEl.alt = booking.client_name || 'Client';
+      clientLogoEl.title = booking.client_name || '';
+    }
+
+    let bookedByEl = null;
+    if (booking.created_by_name) {
+      bookedByEl = document.createElement('span');
+      bookedByEl.className = 'b-booked-by';
+      bookedByEl.textContent = `Booked by ${booking.created_by_name}`;
+    }
+
+    block.appendChild(statusEl);
+    block.appendChild(titleEl);
+    block.appendChild(metaEl);
+    block.appendChild(prepEl);
+    if (noSyncEl) block.appendChild(noSyncEl);
+    block.appendChild(checklistEl);
+    block.appendChild(attendeesEl);
+    if (clientLogoEl) block.appendChild(clientLogoEl);
+    if (bookedByEl) block.appendChild(bookedByEl);
+    block.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditModal(booking);
+    });
+
+    columnEl.appendChild(block);
   }
 
   function dayIndexFor(date) {
