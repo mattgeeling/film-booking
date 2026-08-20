@@ -44,17 +44,19 @@ jobs:
           ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           JSONEOF
 
-      - name: Deploy to IONOS via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Remove files that shouldn't be deployed
+        run: |
+          rm -rf .git .github
+          rm -f "Filming Plan.pdf"
+          rm -f Screenshot*.png
+
+      - name: Deploy to IONOS via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ secrets.IONOS_FTP_SERVER }}
-          username: ${{ secrets.IONOS_FTP_USERNAME }}
-          password: ${{ secrets.IONOS_FTP_PASSWORD }}
-          server-dir: ${{ secrets.IONOS_FTP_SERVER_DIR }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/node_modules/**
-            Filming Plan.pdf
-            Screenshot*.png
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          local_path: './*'
+          remote_path: ${{ secrets.SFTP_TARGET_DIR }}
+          sftp_only: true

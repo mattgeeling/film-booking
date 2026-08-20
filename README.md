@@ -40,15 +40,16 @@ See `/Users/mattgeeling/.claude/plans/crispy-weaving-backus.md` for the full pla
 ## Deployment
 
 Every push to `main` deploys automatically to IONOS via `.github/workflows/deploy.yml`
-(GitHub Actions → FTP). This requires the following **repository secrets**
+(GitHub Actions → SFTP). This requires the following **repository secrets**
 (Settings → Secrets and variables → Actions → New repository secret):
 
 | Secret | Value |
 |---|---|
-| `IONOS_FTP_SERVER` | FTP host from the IONOS control panel |
-| `IONOS_FTP_USERNAME` | FTP username |
-| `IONOS_FTP_PASSWORD` | FTP password |
-| `IONOS_FTP_SERVER_DIR` | Target directory on the server (e.g. `/` or `/film-booking/`) |
+| `SFTP_HOST` | SFTP host from the IONOS control panel |
+| `SFTP_PORT` | SFTP port (usually `22`) |
+| `SFTP_USERNAME` | SFTP username |
+| `SFTP_PASSWORD` | SFTP password |
+| `SFTP_TARGET_DIR` | Target directory on the server (e.g. `/` or `/film-booking/`) |
 | `DB_HOST` | MySQL host from IONOS (often `localhost` or a specific hostname) |
 | `DB_NAME` | MySQL database name |
 | `DB_USER` | MySQL username |
