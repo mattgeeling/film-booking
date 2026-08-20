@@ -6,7 +6,7 @@ require_login();
 
 $personId = (int) ($_GET['person_id'] ?? 0);
 
-$sql = 'SELECT r.id, r.person_id, r.weekday, r.period, r.reason, p.name AS person_name
+$sql = 'SELECT r.id, r.person_id, r.weekday, r.interval_weeks, r.anchor_date, r.period, r.reason, p.name AS person_name
         FROM person_recurring_unavailability r
         JOIN people p ON p.id = r.person_id';
 
@@ -22,6 +22,7 @@ foreach ($rows as &$row) {
     $row['id'] = (int) $row['id'];
     $row['person_id'] = (int) $row['person_id'];
     $row['weekday'] = (int) $row['weekday'];
+    $row['interval_weeks'] = (int) $row['interval_weeks'];
 }
 unset($row);
 

@@ -6,7 +6,7 @@
  * project's policy of keeping the vendor footprint minimal for fast SFTP
  * deploys.
  */
-function send_confirmation_emails(PDO $pdo, array $booking): array
+function build_confirmation_email_context(PDO $pdo, array $booking): array
 {
     $id = (int) $booking['id'];
 
@@ -18,13 +18,7 @@ function send_confirmation_emails(PDO $pdo, array $booking): array
     $attendeeStmt->execute([$id]);
     $attendees = $attendeeStmt->fetchAll();
 
-    if (!$attendees) {
-        return [];
-    }
-
     $cfg = app_config();
-    $mailCfg = $cfg['mail'];
-    $fromHeader = sprintf('%s <%s>', $mailCfg['from_name'], $mailCfg['from_email']);
     $timezone = new DateTimeZone($cfg['timezone']);
     $start = new DateTime(str_replace(' ', 'T', $booking['start_datetime']), $timezone);
     $end = new DateTime(str_replace(' ', 'T', $booking['end_datetime']), $timezone);
@@ -40,16 +34,44 @@ function send_confirmation_emails(PDO $pdo, array $booking): array
 
     $subject = 'Booking confirmed: ' . $booking['title'] . ' - ' . $start->format('D j M');
 
+    return [
+        'attendees' => $attendees,
+        'start' => $start,
+        'end' => $end,
+        'logoUrl' => $logoUrl,
+        'checklist' => $checklist,
+        'subject' => $subject,
+        'mailCfg' => $cfg['mail'],
+    ];
+}
+
+/**
+ * Emails attendees a branded HTML confirmation for a booking. Uses PHP's
+ * built-in mail() rather than a mailer library/SMTP client, matching this
+ * project's policy of keeping the vendor footprint minimal for fast SFTP
+ * deploys.
+ */
+function send_confirmation_emails(PDO $pdo, array $booking): array
+{
+    $ctx = build_confirmation_email_context($pdo, $booking);
+    $attendees = $ctx['attendees'];
+
+    if (!$attendees) {
+        return [];
+    }
+
+    $fromHeader = sprintf('%s <%s>', $ctx['mailCfg']['from_name'], $ctx['mailCfg']['from_email']);
+
     $results = [];
     foreach ($attendees as $attendee) {
         $others = array_values(array_filter($attendees, fn($a) => (int) $a['id'] !== (int) $attendee['id']));
         $otherNames = array_map(fn($a) => $a['name'], $others);
 
-        $html = render_confirmation_email_html($attendee['name'], $booking, $start, $end, $otherNames, $checklist, $logoUrl);
+        $html = render_confirmation_email_html($attendee['name'], $booking, $ctx['start'], $ctx['end'], $otherNames, $ctx['checklist'], $ctx['logoUrl']);
         $headers = "From: {$fromHeader}\r\nContent-Type: text/html; charset=UTF-8";
 
         try {
-            $sent = mail($attendee['email'], $subject, $html, $headers);
+            $sent = mail($attendee['email'], $ctx['subject'], $html, $headers);
             if (!$sent) {
                 throw new RuntimeException('mail() returned false');
             }
@@ -60,6 +82,32 @@ function send_confirmation_emails(PDO $pdo, array $booking): array
     }
 
     return $results;
+}
+
+/**
+ * Renders the confirmation email as a representative preview (from the
+ * first attendee's point of view) without sending anything.
+ */
+function preview_confirmation_email(PDO $pdo, array $booking): array
+{
+    $ctx = build_confirmation_email_context($pdo, $booking);
+    $attendees = $ctx['attendees'];
+
+    if (!$attendees) {
+        return ['html' => null, 'recipients' => [], 'subject' => $ctx['subject']];
+    }
+
+    $first = $attendees[0];
+    $others = array_values(array_filter($attendees, fn($a) => (int) $a['id'] !== (int) $first['id']));
+    $otherNames = array_map(fn($a) => $a['name'], $others);
+
+    $html = render_confirmation_email_html($first['name'], $booking, $ctx['start'], $ctx['end'], $otherNames, $ctx['checklist'], $ctx['logoUrl']);
+
+    return [
+        'html' => $html,
+        'recipients' => array_map(fn($a) => ['name' => $a['name'], 'email' => $a['email']], $attendees),
+        'subject' => $ctx['subject'],
+    ];
 }
 
 function render_confirmation_email_html(

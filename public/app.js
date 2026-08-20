@@ -92,6 +92,13 @@
     confirmBookingBtn: document.getElementById('confirmBookingBtn'),
     unconfirmBookingBtn: document.getElementById('unconfirmBookingBtn'),
     emailConfirmationBtn: document.getElementById('emailConfirmationBtn'),
+    emailPreviewBackdrop: document.getElementById('emailPreviewBackdrop'),
+    emailPreviewRecipients: document.getElementById('emailPreviewRecipients'),
+    emailPreviewSubject: document.getElementById('emailPreviewSubject'),
+    emailPreviewFrame: document.getElementById('emailPreviewFrame'),
+    emailPreviewError: document.getElementById('emailPreviewError'),
+    cancelEmailPreviewBtn: document.getElementById('cancelEmailPreviewBtn'),
+    sendEmailPreviewBtn: document.getElementById('sendEmailPreviewBtn'),
     syncResults: document.getElementById('syncResults'),
     conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
@@ -219,8 +226,9 @@
       const d = addDays(state.weekStart, i);
       const dIso = isoDate(d);
       const blocked = state.blockedDaysByDate[dIso];
+      const isPast = dIso < todayIso;
       const header = document.createElement('div');
-      header.className = 'day-header' + (dIso === todayIso ? ' is-today' : '') + (blocked ? ' is-blocked' : '');
+      header.className = 'day-header' + (dIso === todayIso ? ' is-today' : '') + (blocked ? ' is-blocked' : '') + (isPast ? ' is-past' : '');
       header.innerHTML = `${DAY_NAMES[i]}<span class="day-date">${d.getDate()}</span>`;
 
       const lockBtn = document.createElement('button');
@@ -259,7 +267,7 @@
       const col = document.createElement('div');
       const colDate = addDays(state.weekStart, i);
       const colIso = isoDate(colDate);
-      col.className = 'day-column' + (colIso === todayIso ? ' is-today' : '') + (state.blockedDaysByDate[colIso] ? ' is-blocked' : '');
+      col.className = 'day-column' + (colIso === todayIso ? ' is-today' : '') + (state.blockedDaysByDate[colIso] ? ' is-blocked' : '') + (colIso < todayIso ? ' is-past' : '');
       col.dataset.dayIndex = String(i);
       col.style.height = `${(GRID_END_HOUR - GRID_START_HOUR) * PX_PER_HOUR}px`;
       col.addEventListener('click', (e) => {
@@ -914,11 +922,27 @@
     return jsDay === 0 ? 7 : jsDay;
   }
 
+  function mondayOfIso(dateIso) {
+    const d = new Date(dateIso + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  function recurringRuleMatchesDate(rule, dateIso) {
+    const interval = rule.interval_weeks || 1;
+    if (interval <= 1) return true;
+    if (!rule.anchor_date) return true;
+    const weeksBetween = Math.round((mondayOfIso(dateIso) - mondayOfIso(rule.anchor_date)) / (7 * 86400000));
+    return ((weeksBetween % interval) + interval) % interval === 0;
+  }
+
   function unavailableEntriesForDate(dateIso) {
     const explicit = state.unavailableByDate[dateIso] || [];
     const weekday = isoWeekdayOf(new Date(dateIso + 'T00:00:00'));
     const recurring = state.recurringUnavailability
-      .filter((r) => r.weekday === weekday)
+      .filter((r) => r.weekday === weekday && recurringRuleMatchesDate(r, dateIso))
       .map((r) => ({ person_id: r.person_id, person_name: r.person_name, period: r.period, reason: r.reason, recurring: true }));
     return explicit.concat(recurring);
   }
@@ -1362,9 +1386,38 @@
   async function onEmailConfirmationClick() {
     if (!state.editingId) return;
     el.emailConfirmationBtn.disabled = true;
+    el.emailPreviewError.classList.add('hidden');
+    try {
+      const data = await apiGet(`api/bookings_email_preview.php?id=${state.editingId}`);
+      if (!data.recipients.length) {
+        alert('This booking has no attendees to email.');
+        return;
+      }
+      el.emailPreviewRecipients.textContent = 'To: ' + data.recipients.map((r) => `${r.name} <${r.email}>`).join(', ');
+      el.emailPreviewSubject.textContent = 'Subject: ' + data.subject;
+      el.emailPreviewFrame.srcdoc = data.html;
+      el.sendEmailPreviewBtn.disabled = false;
+      el.emailPreviewBackdrop.classList.remove('hidden');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      el.emailConfirmationBtn.disabled = false;
+    }
+  }
+
+  function closeEmailPreview() {
+    el.emailPreviewBackdrop.classList.add('hidden');
+    el.emailPreviewFrame.srcdoc = '';
+  }
+
+  async function onSendEmailPreviewClick() {
+    if (!state.editingId) return;
+    el.sendEmailPreviewBtn.disabled = true;
+    el.emailPreviewError.classList.add('hidden');
     try {
       const data = await apiPost(`api/bookings_email_confirmation.php?id=${state.editingId}`);
       const failures = (data.email_results || []).filter((r) => r.status === 'error');
+      closeEmailPreview();
       if (failures.length) {
         alert('Some confirmation emails failed to send:\n' +
           failures.map((r) => `${r.person}: ${r.error}`).join('\n'));
@@ -1372,9 +1425,10 @@
         alert(`Confirmation email sent to ${data.email_results.length} attendee${data.email_results.length === 1 ? '' : 's'}.`);
       }
     } catch (err) {
-      alert(err.message);
+      el.emailPreviewError.textContent = err.message;
+      el.emailPreviewError.classList.remove('hidden');
     } finally {
-      el.emailConfirmationBtn.disabled = false;
+      el.sendEmailPreviewBtn.disabled = false;
     }
   }
 
@@ -1567,6 +1621,24 @@
       recurringPeriodSelect.appendChild(opt);
     }
 
+    const intervalSelect = document.createElement('select');
+    for (const [value, label] of [['1', 'Every week'], ['2', 'Every 2 weeks'], ['3', 'Every 3 weeks'], ['4', 'Every 4 weeks']]) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      intervalSelect.appendChild(opt);
+    }
+
+    const anchorDateInput = document.createElement('input');
+    anchorDateInput.type = 'date';
+    anchorDateInput.title = 'Starting date (which week the pattern counts from)';
+    anchorDateInput.classList.add('hidden');
+
+    intervalSelect.addEventListener('change', () => {
+      anchorDateInput.classList.toggle('hidden', intervalSelect.value === '1');
+      anchorDateInput.required = intervalSelect.value !== '1';
+    });
+
     const recurringReasonInput = document.createElement('input');
     recurringReasonInput.type = 'text';
     recurringReasonInput.placeholder = 'Reason (optional)';
@@ -1577,7 +1649,8 @@
     recurringAddBtn.textContent = `Add recurring rule`;
 
     recurringForm.appendChild(weekdaySelect);
-    recurringForm.appendChild(recurringPeriodSelect);
+    recurringForm.appendChild(intervalSelect);
+    recurringForm.appendChild(anchorDateInput);
     recurringForm.appendChild(recurringReasonInput);
     recurringForm.appendChild(recurringAddBtn);
 
@@ -1591,11 +1664,16 @@
         await apiPost('api/person_recurring_unavailable_create.php', {
           person_id: person.id,
           weekday: Number(weekdaySelect.value),
+          interval_weeks: Number(intervalSelect.value),
+          anchor_date: intervalSelect.value !== '1' ? anchorDateInput.value : '',
           period: recurringPeriodSelect.value,
           reason: recurringReasonInput.value.trim(),
         });
         recurringReasonInput.value = '';
         recurringPeriodSelect.value = 'all_day';
+        intervalSelect.value = '1';
+        anchorDateInput.value = '';
+        anchorDateInput.classList.add('hidden');
         await refreshRecurringPanel(recurringList, person);
         await loadRecurringUnavailability();
         await refreshBookings();
@@ -1661,7 +1739,10 @@
       item.className = 'unavailable-item';
       const label = document.createElement('span');
       const periodSuffix = r.period !== 'all_day' ? ` (${UNAVAILABLE_PERIOD_LABELS[r.period]})` : '';
-      label.textContent = `Every ${WEEKDAY_LABELS[r.weekday - 1]}` + periodSuffix + (r.reason ? ` — ${r.reason}` : '');
+      const cadence = r.interval_weeks > 1
+        ? `Every ${r.interval_weeks} weeks on ${WEEKDAY_LABELS[r.weekday - 1]} (from ${r.anchor_date})`
+        : `Every ${WEEKDAY_LABELS[r.weekday - 1]}`;
+      label.textContent = cadence + periodSuffix + (r.reason ? ` — ${r.reason}` : '');
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.textContent = 'Remove';
@@ -2044,6 +2125,9 @@
   el.confirmBookingBtn.addEventListener('click', onConfirmClick);
   el.unconfirmBookingBtn.addEventListener('click', onUnconfirmClick);
   el.emailConfirmationBtn.addEventListener('click', onEmailConfirmationClick);
+  el.cancelEmailPreviewBtn.addEventListener('click', closeEmailPreview);
+  el.sendEmailPreviewBtn.addEventListener('click', onSendEmailPreviewClick);
+  el.emailPreviewBackdrop.addEventListener('click', (e) => { if (e.target === el.emailPreviewBackdrop) closeEmailPreview(); });
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {

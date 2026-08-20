@@ -52,6 +52,22 @@
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  function mondayOfIso(dateIso) {
+    const d = new Date(dateIso + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  function recurringRuleMatchesDate(rule, dateIso) {
+    const interval = rule.interval_weeks || 1;
+    if (interval <= 1) return true;
+    if (!rule.anchor_date) return true;
+    const weeksBetween = Math.round((mondayOfIso(dateIso) - mondayOfIso(rule.anchor_date)) / (7 * 86400000));
+    return ((weeksBetween % interval) + interval) % interval === 0;
+  }
+
   function isoDate(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -147,7 +163,7 @@
         for (let d = new Date(today); d <= windowEnd; d.setDate(d.getDate() + 1)) {
           const weekday = d.getDay() === 0 ? 7 : d.getDay();
           const dayIso = isoDate(d);
-          for (const r of recurring.filter((rule) => rule.weekday === weekday)) {
+          for (const r of recurring.filter((rule) => rule.weekday === weekday && recurringRuleMatchesDate(rule, dayIso))) {
             const period = UNAVAILABLE_PERIOD_LABELS[r.period] || '';
             items.push({
               title: `${r.person_name} unavailable${period}`,

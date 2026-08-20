@@ -334,6 +334,23 @@
     </form>
     </div>
 
+    <div id="emailPreviewBackdrop" class="modal-backdrop hidden">
+      <div class="modal modal-wide">
+        <h2>Email shoot confirmation</h2>
+        <p id="emailPreviewRecipients" class="muted-note"></p>
+        <p id="emailPreviewSubject" class="muted-note"></p>
+        <iframe id="emailPreviewFrame" title="Email preview" class="email-preview-frame"></iframe>
+        <p id="emailPreviewError" class="form-error hidden"></p>
+        <div class="modal-actions">
+          <div class="modal-actions-left"></div>
+          <div class="modal-actions-right">
+            <button type="button" id="cancelEmailPreviewBtn">Cancel</button>
+            <button type="button" id="sendEmailPreviewBtn" class="primary">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="kitUsagePanel" class="kit-usage-panel">
       <h4 id="kitUsageTitle">Kit usage</h4>
       <div id="kitUsageList"></div>
