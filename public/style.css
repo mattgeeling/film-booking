@@ -1264,6 +1264,14 @@ main { padding: 1rem 1.5rem 3rem; }
 
   body { background: #fff; }
 
+  /* Force background colors/images to print even when the browser's
+     "Background graphics" print option is left unchecked. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   .topbar, #kitUsagePanel, #modalBackdrop, #peopleSummary {
     display: none !important;
   }
@@ -1275,12 +1283,14 @@ main { padding: 1rem 1.5rem 3rem; }
   body.printing-document #emailPreviewBackdrop,
   body.printing-document #callSheetBackdrop,
   body.printing-document #shotListBackdrop,
+  body.printing-document #riskAssessmentBackdrop,
   body.printing-document .print-only {
     display: none !important;
   }
 
   body.printing-document #callSheetPrintArea,
-  body.printing-document #shotListPrintArea {
+  body.printing-document #shotListPrintArea,
+  body.printing-document #riskAssessmentPrintArea {
     display: block !important;
   }
 
@@ -1395,8 +1405,30 @@ main { padding: 1rem 1.5rem 3rem; }
   padding: 0.25rem 0.5rem;
 }
 
+/* Risk assessment editor */
+.ra-category-heading {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.ra-category-heading:first-child { margin-top: 0; }
+
+.ra-standard-row {
+  display: grid;
+  grid-template-columns: 2fr 90px 2fr;
+  gap: 0.4rem;
+  align-items: start;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.ra-standard-question { margin: 0; font-size: 0.85rem; padding-top: 0.35rem; }
+.ra-standard-answer { font: inherit; padding: 0.3rem 0.4rem; border: 1px solid var(--border); border-radius: 5px; }
+.ra-standard-detail { font: inherit; padding: 0.3rem 0.45rem; border: 1px solid var(--border); border-radius: 5px; width: 100%; }
+
 /* Call sheet print output */
-#callSheetPrintArea, #shotListPrintArea {
+#callSheetPrintArea, #shotListPrintArea, #riskAssessmentPrintArea {
   font-family: Helvetica, Arial, sans-serif;
   color: #111;
   max-width: 780px;
@@ -1484,14 +1516,45 @@ main { padding: 1rem 1.5rem 3rem; }
   margin-top: 1rem;
 }
 
-/* Shot list print output */
-.sl-print-header { margin-bottom: 0.5rem; }
-.sl-print-header .cs-print-logo { float: right; height: 36px; }
-.sl-print-header .sl-client { font-weight: 700; font-size: 0.95rem; margin: 0; }
-.sl-print-header .sl-subtitle { margin: 2px 0; font-size: 0.85rem; }
-.sl-print-header .sl-date { margin: 0; font-size: 0.8rem; color: #444; }
-.sl-print-rule { border: none; border-top: 1px solid #999; margin: 0.6rem 0 1rem; }
+/* Shared print masthead (Risk Assessment, Shot List) */
+.doc-print-masthead {
+  background: #ffd300;
+  text-align: center;
+  padding: 0.9rem 1rem 0.7rem;
+  margin: 0 0 0.9rem;
+  border-radius: 4px;
+}
+.doc-print-masthead-logo { height: 42px; display: block; margin: 0 auto 0.4rem; }
+.doc-print-masthead h1 { font-size: 1.2rem; margin: 0 0 2px; letter-spacing: 0.02em; }
+.doc-print-masthead .cs-day { font-size: 0.9rem; color: #333; margin: 0; }
 
+/* Risk assessment print output */
+.ra-print-header-table { margin-bottom: 0.85rem; }
+.ra-print-header-table .ra-header-label { width: 28%; font-weight: 700; background: #f5cf82; }
+
+.ra-print-standard-table th, .ra-print-hazards-table th, .ra-print-signoff-table th {
+  background: #f5cf82;
+}
+
+.ra-print-standard-table td { font-size: 0.75rem; }
+
+.ra-precautions-list { margin: 0; padding-left: 1.1rem; }
+.ra-precautions-list li { margin-bottom: 0.15rem; }
+
+.ra-print-matrix td, .ra-print-matrix th { text-align: center; }
+.ra-print-matrix td:first-child, .ra-print-matrix th:first-child { text-align: left; }
+.ra-print-matrix th { background: #f2f2f2; }
+
+.ra-print-signoff-table { margin-bottom: 0.6rem; }
+.ra-print-signoff-table td { height: 2.2rem; }
+.ra-signature {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a6e;
+}
+
+/* Shot list print output */
 .sl-print-section { margin-bottom: 1.1rem; page-break-inside: avoid; }
 .sl-print-section h2 {
   font-size: 0.85rem;

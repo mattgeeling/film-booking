@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Film Plan</title>
-  <link rel="stylesheet" href="style.css?v=20260820">
+  <link rel="stylesheet" href="style.css?v=20260820g">
   <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -266,10 +269,11 @@
               Risk Assessment
               <span id="fieldChecklistRiskAssessmentBy" class="checklist-by hidden"></span>
             </label>
-            <div class="checklist-url-row">
+            <div class="checklist-url-row hidden">
               <input type="url" id="fieldChecklistRiskAssessmentUrl" placeholder="Drive link" class="checklist-url-input">
               <a id="fieldChecklistRiskAssessmentUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
             </div>
+            <button type="button" id="openRiskAssessmentBtn" class="secondary-link-btn hidden">&#128220; Open risk assessment</button>
           </div>
 
           <div class="checklist-row">
@@ -457,12 +461,87 @@
 
     <div id="shotListPrintArea" class="callsheet-print-only"></div>
 
+    <div id="riskAssessmentBackdrop" class="modal-backdrop hidden">
+      <div class="modal modal-wide callsheet-modal">
+        <h2>Risk assessment — <span id="riskAssessmentTitle"></span></h2>
+
+        <div class="callsheet-section">
+          <div class="field-row">
+            <label>Client <input type="text" id="raClientName"></label>
+            <label>Location contact <input type="text" id="raLocationContact"></label>
+          </div>
+          <div class="field-row">
+            <label>Director <input type="text" id="raDirectorName" placeholder="Name"></label>
+            <label>Email <input type="text" id="raDirectorEmail"></label>
+            <label>Mobile <input type="text" id="raDirectorMobile"></label>
+          </div>
+          <div class="field-row">
+            <label>Production Manager <input type="text" id="raPmName" placeholder="Name"></label>
+            <label>Email <input type="text" id="raPmEmail"></label>
+            <label>Mobile <input type="text" id="raPmMobile"></label>
+          </div>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Brief description</h3>
+          <textarea id="raBriefDescription" rows="3" placeholder="What's being filmed, and any key handling/access instructions..."></textarea>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Crew / experts engaged</h3>
+          <textarea id="raCrewExperts" rows="3" placeholder="One per line, e.g. Mark Kuczewski - Production Director / Camera Operator"></textarea>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Fire, first aid, emergency &amp; welfare arrangements</h3>
+          <div id="raStandardRows" class="ra-standard-rows"></div>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Nearest A&amp;E</h3>
+          <textarea id="raNearestAe" rows="2" placeholder="e.g. Gloucestershire Royal Hospital, Great Western Rd, Gloucester (23 miles) - severe&#10;North Cotswolds Hospital, Stow Rd, Moreton-in-Marsh (8 miles) - minor"></textarea>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Hazards identified &amp; precautions</h3>
+          <div id="raHazardRows" class="callsheet-rows"></div>
+          <button type="button" id="raAddHazardRow" class="secondary-link-btn">+ Add hazard</button>
+        </div>
+
+        <div class="callsheet-section">
+          <h3>Sign-off</h3>
+          <div class="field-row">
+            <label>Director name <input type="text" id="raSignoffDirectorName"></label>
+            <label>Date <input type="date" id="raSignoffDirectorDate"></label>
+          </div>
+          <div class="field-row">
+            <label>Producer name <input type="text" id="raSignoffProducerName"></label>
+            <label>Date <input type="date" id="raSignoffProducerDate"></label>
+          </div>
+        </div>
+
+        <p id="riskAssessmentError" class="form-error hidden"></p>
+        <p id="riskAssessmentSavedNote" class="muted-note hidden">Saved.</p>
+
+        <div class="modal-actions">
+          <div class="modal-actions-left"></div>
+          <div class="modal-actions-right">
+            <button type="button" id="cancelRiskAssessmentBtn">Close</button>
+            <button type="button" id="printRiskAssessmentBtn">Print / Save PDF</button>
+            <button type="button" id="saveRiskAssessmentBtn" class="primary">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="riskAssessmentPrintArea" class="callsheet-print-only"></div>
+
     <div id="kitUsagePanel" class="kit-usage-panel">
       <h4 id="kitUsageTitle">Kit usage</h4>
       <div id="kitUsageList"></div>
     </div>
   </div>
 
-  <script src="app.js?v=20260820"></script>
+  <script src="app.js?v=20260820g"></script>
 </body>
 </html>

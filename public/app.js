@@ -30,6 +30,7 @@
     adminSubView: 'clients',
     callSheetBooking: null,
     shotListBooking: null,
+    riskAssessmentBooking: null,
     kitUsagePageMonth: null,
     currentView: 'week',
     monthStr: null,
@@ -140,6 +141,33 @@
     printShotListBtn: document.getElementById('printShotListBtn'),
     saveShotListBtn: document.getElementById('saveShotListBtn'),
     shotListPrintArea: document.getElementById('shotListPrintArea'),
+    openRiskAssessmentBtn: document.getElementById('openRiskAssessmentBtn'),
+    riskAssessmentBackdrop: document.getElementById('riskAssessmentBackdrop'),
+    riskAssessmentTitle: document.getElementById('riskAssessmentTitle'),
+    raClientName: document.getElementById('raClientName'),
+    raLocationContact: document.getElementById('raLocationContact'),
+    raDirectorName: document.getElementById('raDirectorName'),
+    raDirectorEmail: document.getElementById('raDirectorEmail'),
+    raDirectorMobile: document.getElementById('raDirectorMobile'),
+    raPmName: document.getElementById('raPmName'),
+    raPmEmail: document.getElementById('raPmEmail'),
+    raPmMobile: document.getElementById('raPmMobile'),
+    raBriefDescription: document.getElementById('raBriefDescription'),
+    raCrewExperts: document.getElementById('raCrewExperts'),
+    raStandardRows: document.getElementById('raStandardRows'),
+    raNearestAe: document.getElementById('raNearestAe'),
+    raHazardRows: document.getElementById('raHazardRows'),
+    raAddHazardRow: document.getElementById('raAddHazardRow'),
+    raSignoffDirectorName: document.getElementById('raSignoffDirectorName'),
+    raSignoffDirectorDate: document.getElementById('raSignoffDirectorDate'),
+    raSignoffProducerName: document.getElementById('raSignoffProducerName'),
+    raSignoffProducerDate: document.getElementById('raSignoffProducerDate'),
+    riskAssessmentError: document.getElementById('riskAssessmentError'),
+    riskAssessmentSavedNote: document.getElementById('riskAssessmentSavedNote'),
+    cancelRiskAssessmentBtn: document.getElementById('cancelRiskAssessmentBtn'),
+    printRiskAssessmentBtn: document.getElementById('printRiskAssessmentBtn'),
+    saveRiskAssessmentBtn: document.getElementById('saveRiskAssessmentBtn'),
+    riskAssessmentPrintArea: document.getElementById('riskAssessmentPrintArea'),
     syncResults: document.getElementById('syncResults'),
     conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
@@ -1289,6 +1317,7 @@
     el.emailConfirmationBtn.classList.add('hidden');
     el.openCallSheetBtn.classList.add('hidden');
     el.openShotListBtn.classList.add('hidden');
+    el.openRiskAssessmentBtn.classList.add('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1335,6 +1364,7 @@
     el.emailConfirmationBtn.classList.toggle('hidden', booking.status !== 'confirmed');
     el.openCallSheetBtn.classList.remove('hidden');
     el.openShotListBtn.classList.remove('hidden');
+    el.openRiskAssessmentBtn.classList.remove('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1805,6 +1835,7 @@
   function triggerDocumentPrint(printAreaEl, html) {
     el.callSheetPrintArea.innerHTML = '';
     el.shotListPrintArea.innerHTML = '';
+    el.riskAssessmentPrintArea.innerHTML = '';
     printAreaEl.innerHTML = html;
 
     const styleTag = document.createElement('style');
@@ -1934,13 +1965,11 @@
       </div>`).join('');
 
     return `
-      <div class="sl-print-header">
-        <img class="cs-print-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
-        ${booking.client_name ? `<p class="sl-client">${csEscapeHtml(booking.client_name)}</p>` : ''}
-        <p class="sl-subtitle">${csEscapeHtml(el.slSubtitle.value || booking.title)}</p>
-        <p class="sl-date">${dateLabel}</p>
+      <div class="doc-print-masthead">
+        <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+        <h1>SHOT LIST</h1>
+        <p class="cs-day">${booking.client_name ? csEscapeHtml(booking.client_name) + ' — ' : ''}${csEscapeHtml(el.slSubtitle.value || booking.title)} — ${dateLabel}</p>
       </div>
-      <hr class="sl-print-rule">
       ${sectionsHtml}
     `;
   }
@@ -1948,6 +1977,267 @@
   function onPrintShotListClick() {
     if (!state.shotListBooking) return;
     triggerDocumentPrint(el.shotListPrintArea, renderShotListPrintHtml());
+  }
+
+  const RA_STANDARD_QUESTIONS = [
+    { key: 'fire_detection', category: 'Fire', question: 'Do you have adequate means of fire detection and a means of raising the alarm in place?' },
+    { key: 'fire_exits', category: 'Fire', question: 'Are there adequate numbers of fire exits which are unlocked, signed, and kept clear at all times?' },
+    { key: 'fire_extinguishers', category: 'Fire', question: 'Are there adequate numbers of fire extinguishers in place?' },
+    { key: 'fire_briefing', category: 'Fire', question: 'Will everyone be briefed on the emergency arrangements in place?' },
+    { key: 'first_aiders', category: 'First Aid', question: 'First aiders/First Aid Kits/Paramedics in place as required?' },
+    { key: 'heating_ventilation', category: 'Welfare', question: 'Adequate heating and ventilation?' },
+    { key: 'drinking_water', category: 'Welfare', question: 'Drinking water available?' },
+    { key: 'washing_changing', category: 'Welfare', question: 'Washing and changing facilities provided if necessary?' },
+  ];
+
+  const RA_HAZARD_FIELDS = [
+    { key: 'hazard', placeholder: 'Hazard', flex: '0 0 160px' },
+    { key: 'to_whom', placeholder: 'To whom', flex: '0 0 130px' },
+    { key: 'precautions', placeholder: 'Precautions (one per line)', type: 'textarea', flex: '1' },
+    { key: 'level', placeholder: 'Level', flex: '0 0 60px' },
+  ];
+
+  function renderStandardArrangementsRows(data) {
+    el.raStandardRows.innerHTML = '';
+    let lastCategory = null;
+    for (const q of RA_STANDARD_QUESTIONS) {
+      if (q.category !== lastCategory) {
+        const heading = document.createElement('h4');
+        heading.className = 'ra-category-heading';
+        heading.textContent = q.category;
+        el.raStandardRows.appendChild(heading);
+        lastCategory = q.category;
+      }
+      const saved = (data && data[q.key]) || {};
+      const row = document.createElement('div');
+      row.className = 'ra-standard-row';
+      row.dataset.key = q.key;
+      const questionEl = document.createElement('p');
+      questionEl.className = 'ra-standard-question';
+      questionEl.textContent = q.question;
+      const select = document.createElement('select');
+      select.className = 'ra-standard-answer';
+      for (const opt of ['Yes', 'No', 'N/A']) {
+        const optEl = document.createElement('option');
+        optEl.value = opt;
+        optEl.textContent = opt;
+        if ((saved.answer || 'Yes') === opt) optEl.selected = true;
+        select.appendChild(optEl);
+      }
+      const detail = document.createElement('textarea');
+      detail.className = 'ra-standard-detail';
+      detail.rows = 2;
+      detail.placeholder = 'Detail / notes';
+      detail.value = saved.detail || '';
+      row.appendChild(questionEl);
+      row.appendChild(select);
+      row.appendChild(detail);
+      el.raStandardRows.appendChild(row);
+    }
+  }
+
+  function collectStandardArrangements() {
+    const result = {};
+    for (const row of el.raStandardRows.querySelectorAll('.ra-standard-row')) {
+      result[row.dataset.key] = {
+        answer: row.querySelector('.ra-standard-answer').value,
+        detail: row.querySelector('.ra-standard-detail').value.trim(),
+      };
+    }
+    return result;
+  }
+
+  async function openRiskAssessment(booking) {
+    state.riskAssessmentBooking = booking;
+    el.riskAssessmentTitle.textContent = booking.title;
+    el.riskAssessmentError.classList.add('hidden');
+    el.riskAssessmentSavedNote.classList.add('hidden');
+    el.riskAssessmentBackdrop.classList.remove('hidden');
+    try {
+      const data = await apiGet(`api/risk_assessment_get.php?booking_id=${booking.id}`);
+      el.raClientName.value = data.client_name || '';
+      el.raLocationContact.value = data.location_contact || '';
+      el.raDirectorName.value = data.director_name || '';
+      el.raDirectorEmail.value = data.director_email || '';
+      el.raDirectorMobile.value = data.director_mobile || '';
+      el.raPmName.value = data.production_manager_name || '';
+      el.raPmEmail.value = data.production_manager_email || '';
+      el.raPmMobile.value = data.production_manager_mobile || '';
+      el.raBriefDescription.value = data.brief_description || '';
+      el.raCrewExperts.value = data.crew_experts || '';
+      el.raNearestAe.value = data.nearest_ae || '';
+      el.raSignoffDirectorName.value = data.signoff_director_name || '';
+      el.raSignoffDirectorDate.value = data.signoff_director_date || '';
+      el.raSignoffProducerName.value = data.signoff_producer_name || '';
+      el.raSignoffProducerDate.value = data.signoff_producer_date || '';
+
+      renderStandardArrangementsRows(data.standard_arrangements);
+
+      el.raHazardRows.innerHTML = '';
+      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, row);
+    } catch (err) {
+      el.riskAssessmentError.textContent = err.message;
+      el.riskAssessmentError.classList.remove('hidden');
+    }
+  }
+
+  function closeRiskAssessment() {
+    el.riskAssessmentBackdrop.classList.add('hidden');
+    state.riskAssessmentBooking = null;
+  }
+
+  async function saveRiskAssessment() {
+    if (!state.riskAssessmentBooking) return;
+    el.riskAssessmentError.classList.add('hidden');
+    el.riskAssessmentSavedNote.classList.add('hidden');
+    el.saveRiskAssessmentBtn.disabled = true;
+    try {
+      await apiPost(`api/risk_assessment_save.php?booking_id=${state.riskAssessmentBooking.id}`, {
+        client_name: el.raClientName.value.trim(),
+        location_contact: el.raLocationContact.value.trim(),
+        director_name: el.raDirectorName.value.trim(),
+        director_email: el.raDirectorEmail.value.trim(),
+        director_mobile: el.raDirectorMobile.value.trim(),
+        production_manager_name: el.raPmName.value.trim(),
+        production_manager_email: el.raPmEmail.value.trim(),
+        production_manager_mobile: el.raPmMobile.value.trim(),
+        brief_description: el.raBriefDescription.value.trim(),
+        crew_experts: el.raCrewExperts.value.trim(),
+        nearest_ae: el.raNearestAe.value.trim(),
+        standard_arrangements: collectStandardArrangements(),
+        hazards: collectCallSheetRows(el.raHazardRows, ['hazard', 'to_whom', 'precautions', 'level']),
+        signoff_director_name: el.raSignoffDirectorName.value.trim(),
+        signoff_director_date: el.raSignoffDirectorDate.value,
+        signoff_producer_name: el.raSignoffProducerName.value.trim(),
+        signoff_producer_date: el.raSignoffProducerDate.value,
+      });
+      el.riskAssessmentSavedNote.classList.remove('hidden');
+    } catch (err) {
+      el.riskAssessmentError.textContent = err.message;
+      el.riskAssessmentError.classList.remove('hidden');
+    } finally {
+      el.saveRiskAssessmentBtn.disabled = false;
+    }
+  }
+
+  function raSignatureHtml(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '';
+    return `<span class="ra-signature">${csEscapeHtml(trimmed)}</span>`;
+  }
+
+  function renderRiskAssessmentPrintHtml() {
+    const booking = state.riskAssessmentBooking;
+    const start = new Date(booking.start_datetime.replace(' ', 'T'));
+    const dateLabel = start.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+    const w3wSlug = (booking.what3words || '').replace(/^\/\/\//, '');
+
+    const standardByCategory = {};
+    for (const q of RA_STANDARD_QUESTIONS) {
+      const row = el.raStandardRows.querySelector(`.ra-standard-row[data-key="${q.key}"]`);
+      const answer = row ? row.querySelector('.ra-standard-answer').value : '';
+      const detail = row ? row.querySelector('.ra-standard-detail').value.trim() : '';
+      (standardByCategory[q.category] = standardByCategory[q.category] || []).push({ question: q.question, answer, detail });
+    }
+    const standardTable = `
+      <table class="cs-print-table ra-print-standard-table">
+        <thead><tr><th>Category</th><th>Question</th><th>Detail</th><th>Yes/No</th></tr></thead>
+        <tbody>${Object.entries(standardByCategory).map(([category, rows]) => rows.map((r, i) => `
+          <tr>
+            ${i === 0 ? `<td rowspan="${rows.length}">${csEscapeHtml(category)}</td>` : ''}
+            <td>${csEscapeHtml(r.question)}</td>
+            <td>${csEscapeHtml(r.detail).replace(/\n/g, '<br>')}</td>
+            <td>${csEscapeHtml(r.answer)}</td>
+          </tr>`).join('')).join('')}
+          <tr><td colspan="2">Nearest A&amp;E</td><td colspan="2">${csEscapeHtml(el.raNearestAe.value).replace(/\n/g, '<br>')}</td></tr>
+        </tbody>
+      </table>`;
+
+    const hazards = collectCallSheetRows(el.raHazardRows, ['hazard', 'to_whom', 'precautions', 'level']);
+    const hazardsTable = hazards.length ? `
+      <table class="cs-print-table ra-print-hazards-table">
+        <thead><tr><th style="width:16%">Hazard</th><th style="width:12%">To whom</th><th>Precautions required</th><th style="width:6%">Level</th></tr></thead>
+        <tbody>${hazards.map((h) => `
+          <tr>
+            <td>${csEscapeHtml(h.hazard)}</td>
+            <td>${csEscapeHtml(h.to_whom)}</td>
+            <td><ul class="ra-precautions-list">${h.precautions.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => `<li>${csEscapeHtml(p)}</li>`).join('')}</ul></td>
+            <td>${csEscapeHtml(h.level)}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '<p style="font-size:0.8rem;color:#777;">None added.</p>';
+
+    const matrixCell = (val) => {
+      const colors = { L: '#8fce7a', M: '#ffe066', H: '#f6a94a', E: '#e06666' };
+      return `<td style="background:${colors[val]};text-align:center;font-weight:700;">${val}</td>`;
+    };
+    const matrixHtml = `
+      <table class="cs-print-table ra-print-matrix">
+        <thead><tr><th>Likelihood</th><th>Insignificant</th><th>Minor</th><th>Moderate</th><th>Major</th><th>Severe</th></tr></thead>
+        <tbody>
+          <tr><td>Almost certain</td>${matrixCell('M')}${matrixCell('H')}${matrixCell('H')}${matrixCell('E')}${matrixCell('E')}</tr>
+          <tr><td>Likely</td>${matrixCell('M')}${matrixCell('M')}${matrixCell('H')}${matrixCell('H')}${matrixCell('E')}</tr>
+          <tr><td>Possible</td>${matrixCell('L')}${matrixCell('M')}${matrixCell('M')}${matrixCell('H')}${matrixCell('E')}</tr>
+          <tr><td>Unlikely</td>${matrixCell('L')}${matrixCell('M')}${matrixCell('M')}${matrixCell('M')}${matrixCell('H')}</tr>
+          <tr><td>Rare</td>${matrixCell('L')}${matrixCell('L')}${matrixCell('M')}${matrixCell('M')}${matrixCell('H')}</tr>
+        </tbody>
+      </table>`;
+
+    return `
+      <div class="doc-print-masthead">
+        <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+        <h1>PRODUCTION RISK ASSESSMENT</h1>
+        <p class="cs-day">${csEscapeHtml(booking.title)} — ${dateLabel}</p>
+      </div>
+
+      <table class="cs-print-table ra-print-header-table">
+        <tbody>
+          <tr><td class="ra-header-label">Client</td><td>${csEscapeHtml(el.raClientName.value)}</td></tr>
+          <tr><td class="ra-header-label">Location address</td><td>${csEscapeHtml(booking.location || '')}${booking.what3words ? ` — what3words: <a href="https://what3words.com/${csEscapeHtml(w3wSlug)}">${csEscapeHtml(booking.what3words)}</a>` : ''}</td></tr>
+          <tr><td class="ra-header-label">Location contact</td><td>${csEscapeHtml(el.raLocationContact.value)}</td></tr>
+          <tr><td class="ra-header-label">Director</td><td>${csEscapeHtml(el.raDirectorName.value)}${el.raDirectorEmail.value ? ' — ' + csEscapeHtml(el.raDirectorEmail.value) : ''}${el.raDirectorMobile.value ? ' — ' + csEscapeHtml(el.raDirectorMobile.value) : ''}</td></tr>
+          <tr><td class="ra-header-label">Production Manager</td><td>${csEscapeHtml(el.raPmName.value)}${el.raPmEmail.value ? ' — ' + csEscapeHtml(el.raPmEmail.value) : ''}${el.raPmMobile.value ? ' — ' + csEscapeHtml(el.raPmMobile.value) : ''}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">BRIEF DESCRIPTION</div>
+        <div class="cs-print-box-body"><p>${csEscapeHtml(el.raBriefDescription.value).replace(/\n/g, '<br>')}</p></div>
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">CREW / EXPERTS ENGAGED</div>
+        <div class="cs-print-box-body"><p>${csEscapeHtml(el.raCrewExperts.value).replace(/\n/g, '<br>')}</p></div>
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">FIRE, FIRST AID, EMERGENCY &amp; WELFARE ARRANGEMENTS</div>
+        <div class="cs-print-box-body">${standardTable}</div>
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">HAZARDS IDENTIFIED / RISKS ARISING</div>
+        <div class="cs-print-box-body">${hazardsTable}</div>
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">CONSEQUENCES / LIKELIHOOD</div>
+        <div class="cs-print-box-body">${matrixHtml}</div>
+      </div>
+
+      <table class="cs-print-table ra-print-signoff-table">
+        <thead><tr><th>Director</th><th>Signature</th><th>Date</th></tr></thead>
+        <tbody><tr><td>${csEscapeHtml(el.raSignoffDirectorName.value)}</td><td>${raSignatureHtml(el.raSignoffDirectorName.value)}</td><td>${csEscapeHtml(el.raSignoffDirectorDate.value)}</td></tr></tbody>
+      </table>
+      <table class="cs-print-table ra-print-signoff-table">
+        <thead><tr><th>Producer</th><th>Signature</th><th>Date</th></tr></thead>
+        <tbody><tr><td>${csEscapeHtml(el.raSignoffProducerName.value)}</td><td>${raSignatureHtml(el.raSignoffProducerName.value)}</td><td>${csEscapeHtml(el.raSignoffProducerDate.value)}</td></tr></tbody>
+      </table>
+    `;
+  }
+
+  function onPrintRiskAssessmentClick() {
+    if (!state.riskAssessmentBooking) return;
+    triggerDocumentPrint(el.riskAssessmentPrintArea, renderRiskAssessmentPrintHtml());
   }
 
   async function onUnconfirmClick() {
@@ -2666,6 +2956,13 @@
   el.printShotListBtn.addEventListener('click', onPrintShotListClick);
   el.shotListBackdrop.addEventListener('click', (e) => { if (e.target === el.shotListBackdrop) closeShotList(); });
   el.slAddSection.addEventListener('click', () => buildShotListSection({}));
+
+  el.openRiskAssessmentBtn.addEventListener('click', () => { if (state.editingBooking) openRiskAssessment(state.editingBooking); });
+  el.cancelRiskAssessmentBtn.addEventListener('click', closeRiskAssessment);
+  el.saveRiskAssessmentBtn.addEventListener('click', saveRiskAssessment);
+  el.printRiskAssessmentBtn.addEventListener('click', onPrintRiskAssessmentClick);
+  el.riskAssessmentBackdrop.addEventListener('click', (e) => { if (e.target === el.riskAssessmentBackdrop) closeRiskAssessment(); });
+  el.raAddHazardRow.addEventListener('click', () => buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, {}));
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
