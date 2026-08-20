@@ -41,12 +41,20 @@ $checklistRiskAssessment = array_key_exists('checklist_risk_assessment', $body)
     ? !empty($body['checklist_risk_assessment']) : (bool) $booking['checklist_risk_assessment'];
 $checklistShotList = array_key_exists('checklist_shot_list', $body)
     ? !empty($body['checklist_shot_list']) : (bool) $booking['checklist_shot_list'];
+$checklistShotListNa = array_key_exists('checklist_shot_list_na', $body)
+    ? !empty($body['checklist_shot_list_na']) : (bool) $booking['checklist_shot_list_na'];
+if ($checklistShotListNa) {
+    $checklistShotList = false;
+}
 $checklistPreproductionCreative = array_key_exists('checklist_preproduction_creative', $body)
     ? !empty($body['checklist_preproduction_creative']) : (bool) $booking['checklist_preproduction_creative'];
+$checklistAdditionalDocuments = array_key_exists('checklist_additional_documents', $body)
+    ? !empty($body['checklist_additional_documents']) : (bool) $booking['checklist_additional_documents'];
 $callSheetUrl = trim((string) ($body['checklist_call_sheet_url'] ?? ($booking['checklist_call_sheet_url'] ?? '')));
 $riskAssessmentUrl = trim((string) ($body['checklist_risk_assessment_url'] ?? ($booking['checklist_risk_assessment_url'] ?? '')));
 $shotListUrl = trim((string) ($body['checklist_shot_list_url'] ?? ($booking['checklist_shot_list_url'] ?? '')));
 $preprodUrl = trim((string) ($body['checklist_preproduction_creative_url'] ?? ($booking['checklist_preproduction_creative_url'] ?? '')));
+$additionalDocumentsUrl = trim((string) ($body['checklist_additional_documents_url'] ?? ($booking['checklist_additional_documents_url'] ?? '')));
 $skipCalendarSync = array_key_exists('skip_calendar_sync', $body)
     ? !empty($body['skip_calendar_sync']) : (bool) $booking['skip_calendar_sync'];
 $kitSource = (string) ($body['kit_source'] ?? $booking['kit_source']);
@@ -59,6 +67,7 @@ $callSheetBy = checklist_by_value($checklistCallSheet, (bool) $booking['checklis
 $riskBy = checklist_by_value($checklistRiskAssessment, (bool) $booking['checklist_risk_assessment'], $booking['checklist_risk_assessment_by'], $userName);
 $shotListBy = checklist_by_value($checklistShotList, (bool) $booking['checklist_shot_list'], $booking['checklist_shot_list_by'], $userName);
 $preprodBy = checklist_by_value($checklistPreproductionCreative, (bool) $booking['checklist_preproduction_creative'], $booking['checklist_preproduction_creative_by'], $userName);
+$additionalDocumentsBy = checklist_by_value($checklistAdditionalDocuments, (bool) $booking['checklist_additional_documents'], $booking['checklist_additional_documents_by'], $userName);
 
 function checklist_by_value(bool $newValue, bool $oldValue, ?string $existingBy, string $userName): ?string
 {
@@ -123,8 +132,9 @@ try {
          start_datetime = :start, end_datetime = :end,
          checklist_call_sheet = :call_sheet, checklist_call_sheet_by = :call_sheet_by, checklist_call_sheet_url = :call_sheet_url,
          checklist_risk_assessment = :risk, checklist_risk_assessment_by = :risk_by, checklist_risk_assessment_url = :risk_url,
-         checklist_shot_list = :shot_list, checklist_shot_list_by = :shot_list_by, checklist_shot_list_url = :shot_list_url,
+         checklist_shot_list = :shot_list, checklist_shot_list_by = :shot_list_by, checklist_shot_list_url = :shot_list_url, checklist_shot_list_na = :shot_list_na,
          checklist_preproduction_creative = :preprod, checklist_preproduction_creative_by = :preprod_by, checklist_preproduction_creative_url = :preprod_url,
+         checklist_additional_documents = :additional_docs, checklist_additional_documents_by = :additional_docs_by, checklist_additional_documents_url = :additional_docs_url,
          skip_calendar_sync = :skip_sync, kit_source = :kit_source
          WHERE id = :id'
     );
@@ -146,9 +156,13 @@ try {
         'shot_list' => (int) $checklistShotList,
         'shot_list_by' => $shotListBy,
         'shot_list_url' => $shotListUrl ?: null,
+        'shot_list_na' => (int) $checklistShotListNa,
         'preprod' => (int) $checklistPreproductionCreative,
         'preprod_by' => $preprodBy,
         'preprod_url' => $preprodUrl ?: null,
+        'additional_docs' => (int) $checklistAdditionalDocuments,
+        'additional_docs_by' => $additionalDocumentsBy,
+        'additional_docs_url' => $additionalDocumentsUrl ?: null,
         'skip_sync' => (int) $skipCalendarSync,
         'id' => $id,
     ]);
@@ -175,12 +189,20 @@ $freshBooking = array_merge($booking, [
     'end_datetime' => $endDt->format('Y-m-d H:i:s'),
     'checklist_call_sheet' => $checklistCallSheet,
     'checklist_call_sheet_by' => $callSheetBy,
+    'checklist_call_sheet_url' => $callSheetUrl ?: null,
     'checklist_risk_assessment' => $checklistRiskAssessment,
     'checklist_risk_assessment_by' => $riskBy,
+    'checklist_risk_assessment_url' => $riskAssessmentUrl ?: null,
     'checklist_shot_list' => $checklistShotList,
     'checklist_shot_list_by' => $shotListBy,
+    'checklist_shot_list_url' => $shotListUrl ?: null,
+    'checklist_shot_list_na' => $checklistShotListNa,
     'checklist_preproduction_creative' => $checklistPreproductionCreative,
     'checklist_preproduction_creative_by' => $preprodBy,
+    'checklist_preproduction_creative_url' => $preprodUrl ?: null,
+    'checklist_additional_documents' => $checklistAdditionalDocuments,
+    'checklist_additional_documents_by' => $additionalDocumentsBy,
+    'checklist_additional_documents_url' => $additionalDocumentsUrl ?: null,
     'skip_calendar_sync' => $skipCalendarSync,
 ]);
 

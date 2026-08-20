@@ -36,9 +36,13 @@ CREATE TABLE IF NOT EXISTS bookings (
   checklist_shot_list               TINYINT(1)   NOT NULL DEFAULT 0,
   checklist_shot_list_by            VARCHAR(255) NULL,
   checklist_shot_list_url           VARCHAR(500) NULL,
+  checklist_shot_list_na            TINYINT(1)   NOT NULL DEFAULT 0,
   checklist_preproduction_creative     TINYINT(1)   NOT NULL DEFAULT 0,
   checklist_preproduction_creative_by  VARCHAR(255) NULL,
   checklist_preproduction_creative_url VARCHAR(500) NULL,
+  checklist_additional_documents       TINYINT(1)   NOT NULL DEFAULT 0,
+  checklist_additional_documents_by    VARCHAR(255) NULL,
+  checklist_additional_documents_url   VARCHAR(500) NULL,
   skip_calendar_sync TINYINT(1) NOT NULL DEFAULT 0,
   kit_source ENUM('fuzzy_duck','mark','tom') NOT NULL DEFAULT 'fuzzy_duck',
   created_by     VARCHAR(255) NULL,
@@ -93,6 +97,19 @@ CREATE TABLE IF NOT EXISTS person_unavailable_days (
   created_by VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_person_day_period (person_id, day, period),
+  FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- weekday follows ISO-8601: 1=Monday .. 7=Sunday.
+CREATE TABLE IF NOT EXISTS person_recurring_unavailability (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  person_id  INT UNSIGNED NOT NULL,
+  weekday    TINYINT UNSIGNED NOT NULL,
+  period     ENUM('all_day','am','pm') NOT NULL DEFAULT 'all_day',
+  reason     VARCHAR(255) NULL,
+  created_by VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_person_weekday_period (person_id, weekday, period),
   FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

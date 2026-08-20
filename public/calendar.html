@@ -30,9 +30,7 @@
           <button id="viewWeekBtn" type="button" class="active">Week</button>
           <button id="viewMonthBtn" type="button">Month</button>
           <button id="viewPeopleBtn" type="button">People</button>
-          <button id="viewClientsBtn" type="button">Clients</button>
-          <button id="viewKitUsageBtn" type="button">Kit Usage</button>
-          <button id="viewBlockedDaysBtn" type="button">Blocked Days</button>
+          <button id="viewAdminBtn" type="button">Admin</button>
         </nav>
         <div id="weekControls" class="week-nav">
           <button id="prevWeek" type="button" aria-label="Previous week">&larr;</button>
@@ -106,6 +104,14 @@
       </table>
     </section>
 
+    <section id="adminView" class="admin-view hidden">
+      <nav class="admin-sub-nav">
+        <button id="adminTabClientsBtn" type="button">Clients</button>
+        <button id="adminTabKitUsageBtn" type="button">Kit Usage</button>
+        <button id="adminTabBlockedDaysBtn" type="button">Blocked Days</button>
+        <button id="adminTabNeedsPrepBtn" type="button">Needs Prep</button>
+      </nav>
+
     <section id="clientsView" class="people-view hidden">
       <h2>Clients</h2>
       <form id="clientForm" class="person-form">
@@ -153,6 +159,18 @@
         </thead>
         <tbody id="blockedDaysTableBody"></tbody>
       </table>
+    </section>
+
+    <section id="needsPrepView" class="people-view hidden">
+      <h2>Needs prep</h2>
+      <p class="muted-note">Upcoming bookings that don't have every pre-production item ticked off yet.</p>
+      <table class="people-table">
+        <thead>
+          <tr><th>Date</th><th>Booking</th><th>Client</th><th>Status</th><th>Missing</th></tr>
+        </thead>
+        <tbody id="needsPrepTableBody"></tbody>
+      </table>
+    </section>
     </section>
     </main>
 
@@ -259,6 +277,10 @@
               Shot List
               <span id="fieldChecklistShotListBy" class="checklist-by hidden"></span>
             </label>
+            <label class="checklist-na-item">
+              <input type="checkbox" id="fieldChecklistShotListNa">
+              Not required
+            </label>
             <div class="checklist-url-row">
               <input type="url" id="fieldChecklistShotListUrl" placeholder="Drive link" class="checklist-url-input">
               <a id="fieldChecklistShotListUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
@@ -276,6 +298,20 @@
               <a id="fieldChecklistPreproductionCreativeUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
             </div>
           </div>
+
+          <div class="checklist-row">
+            <label class="checklist-item">
+              <input type="checkbox" id="fieldChecklistAdditionalDocuments">
+              Additional documents <span class="checklist-optional-tag">optional</span>
+              <span id="fieldChecklistAdditionalDocumentsBy" class="checklist-by hidden"></span>
+            </label>
+            <div class="checklist-url-row">
+              <input type="url" id="fieldChecklistAdditionalDocumentsUrl" placeholder="Drive link" class="checklist-url-input">
+              <a id="fieldChecklistAdditionalDocumentsUrlLink" href="#" target="_blank" rel="noopener" class="checklist-url-link hidden" title="Open in Google Drive">&#128279;</a>
+            </div>
+          </div>
+
+          <button type="button" id="openAllDocsBtn" class="secondary-link-btn hidden">&#128279; Open all attached documents</button>
         </div>
       </div>
 
@@ -288,6 +324,7 @@
           <button type="button" id="deleteBookingBtn" class="danger hidden">Delete</button>
           <button type="button" id="confirmBookingBtn" class="confirm hidden">&#10003; Confirm booking</button>
           <button type="button" id="unconfirmBookingBtn" class="hidden">&#9998; Unconfirm</button>
+          <button type="button" id="emailConfirmationBtn" class="hidden">&#9993; Email shoot confirmation</button>
         </div>
         <div class="modal-actions-right">
           <button type="button" id="cancelModalBtn">Cancel</button>

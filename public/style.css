@@ -745,6 +745,46 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .checklist-by.hidden { display: none; }
 
+.checklist-na-item {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.4rem !important;
+  font-size: 0.75rem !important;
+  color: var(--muted) !important;
+  padding: 0 0 0.35rem 1.65rem;
+}
+
+.checklist-na-item input[type=checkbox] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.checklist-optional-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: #eee;
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+}
+
+.secondary-link-btn {
+  margin-top: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--confirmed-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  text-align: left;
+}
+
+.secondary-link-btn:hover { text-decoration: underline; }
+
 .field-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
@@ -832,6 +872,21 @@ main { padding: 1rem 1.5rem 3rem; }
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
   max-width: 720px;
+}
+
+.admin-view { max-width: 720px; }
+
+.admin-sub-nav {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.admin-sub-nav button.active {
+  background: var(--brand-yellow);
+  color: #111;
+  border-color: var(--brand-yellow);
+  font-weight: 600;
 }
 
 .people-view h2 { margin-top: 0; font-size: 1rem; }
@@ -1115,6 +1170,34 @@ main { padding: 1rem 1.5rem 3rem; }
   flex-direction: column;
   gap: 0.35rem;
 }
+
+.unavailable-panel-subheading {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.muted-note { color: var(--muted); font-size: 0.9rem; }
+
+.needs-prep-missing { color: var(--pencil-text); font-size: 0.85rem; }
+
+.prep-status-pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid;
+}
+
+.prep-status-pill.status-pencil { background: var(--pencil-bg); border-color: var(--pencil-border); color: var(--pencil-text); }
+.prep-status-pill.status-confirmed { background: var(--confirmed-bg); border-color: var(--confirmed-border); color: var(--confirmed-text); }
+
+.people-table tr.clickable-row { cursor: pointer; }
+.people-table tr.clickable-row:hover { background: #f9fafc; }
 
 .unavailable-item {
   display: flex;

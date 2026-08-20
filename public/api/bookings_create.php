@@ -17,11 +17,17 @@ $attendeeIds = array_values(array_unique(array_map('intval', $body['attendee_ids
 $checklistCallSheet = !empty($body['checklist_call_sheet']);
 $checklistRiskAssessment = !empty($body['checklist_risk_assessment']);
 $checklistShotList = !empty($body['checklist_shot_list']);
+$checklistShotListNa = !empty($body['checklist_shot_list_na']);
+if ($checklistShotListNa) {
+    $checklistShotList = false;
+}
 $checklistPreproductionCreative = !empty($body['checklist_preproduction_creative']);
+$checklistAdditionalDocuments = !empty($body['checklist_additional_documents']);
 $callSheetUrl = trim((string) ($body['checklist_call_sheet_url'] ?? ''));
 $riskAssessmentUrl = trim((string) ($body['checklist_risk_assessment_url'] ?? ''));
 $shotListUrl = trim((string) ($body['checklist_shot_list_url'] ?? ''));
 $preprodUrl = trim((string) ($body['checklist_preproduction_creative_url'] ?? ''));
+$additionalDocumentsUrl = trim((string) ($body['checklist_additional_documents_url'] ?? ''));
 $skipCalendarSync = !empty($body['skip_calendar_sync']);
 $kitSource = (string) ($body['kit_source'] ?? 'fuzzy_duck');
 if (!in_array($kitSource, ['fuzzy_duck', 'mark', 'tom'], true)) {
@@ -32,6 +38,7 @@ $callSheetBy = $checklistCallSheet ? $userName : null;
 $riskBy = $checklistRiskAssessment ? $userName : null;
 $shotListBy = $checklistShotList ? $userName : null;
 $preprodBy = $checklistPreproductionCreative ? $userName : null;
+$additionalDocumentsBy = $checklistAdditionalDocuments ? $userName : null;
 
 if ($title === '') {
     json_error('Title is required');
@@ -80,13 +87,15 @@ try {
         'INSERT INTO bookings (title, location, what3words, client_id, notes, start_datetime, end_datetime, status, created_by, created_by_name,
             checklist_call_sheet, checklist_call_sheet_by, checklist_call_sheet_url,
             checklist_risk_assessment, checklist_risk_assessment_by, checklist_risk_assessment_url,
-            checklist_shot_list, checklist_shot_list_by, checklist_shot_list_url,
+            checklist_shot_list, checklist_shot_list_by, checklist_shot_list_url, checklist_shot_list_na,
             checklist_preproduction_creative, checklist_preproduction_creative_by, checklist_preproduction_creative_url,
+            checklist_additional_documents, checklist_additional_documents_by, checklist_additional_documents_url,
             skip_calendar_sync, kit_source)
          VALUES (:title, :location, :what3words, :client_id, :notes, :start, :end, "pencil", :created_by, :created_by_name,
             :call_sheet, :call_sheet_by, :call_sheet_url,
-            :risk, :risk_by, :risk_url, :shot_list, :shot_list_by, :shot_list_url,
-            :preprod, :preprod_by, :preprod_url, :skip_sync, :kit_source)'
+            :risk, :risk_by, :risk_url, :shot_list, :shot_list_by, :shot_list_url, :shot_list_na,
+            :preprod, :preprod_by, :preprod_url,
+            :additional_docs, :additional_docs_by, :additional_docs_url, :skip_sync, :kit_source)'
     );
     $stmt->execute([
         'title' => $title,
@@ -108,9 +117,13 @@ try {
         'shot_list' => (int) $checklistShotList,
         'shot_list_by' => $shotListBy,
         'shot_list_url' => $shotListUrl ?: null,
+        'shot_list_na' => (int) $checklistShotListNa,
         'preprod' => (int) $checklistPreproductionCreative,
         'preprod_by' => $preprodBy,
         'preprod_url' => $preprodUrl ?: null,
+        'additional_docs' => (int) $checklistAdditionalDocuments,
+        'additional_docs_by' => $additionalDocumentsBy,
+        'additional_docs_url' => $additionalDocumentsUrl ?: null,
         'skip_sync' => (int) $skipCalendarSync,
     ]);
     $bookingId = (int) $pdo->lastInsertId();
@@ -136,12 +149,20 @@ $freshBooking = [
     'status' => 'pencil',
     'checklist_call_sheet' => $checklistCallSheet,
     'checklist_call_sheet_by' => $callSheetBy,
+    'checklist_call_sheet_url' => $callSheetUrl ?: null,
     'checklist_risk_assessment' => $checklistRiskAssessment,
     'checklist_risk_assessment_by' => $riskBy,
+    'checklist_risk_assessment_url' => $riskAssessmentUrl ?: null,
     'checklist_shot_list' => $checklistShotList,
     'checklist_shot_list_by' => $shotListBy,
+    'checklist_shot_list_url' => $shotListUrl ?: null,
+    'checklist_shot_list_na' => $checklistShotListNa,
     'checklist_preproduction_creative' => $checklistPreproductionCreative,
     'checklist_preproduction_creative_by' => $preprodBy,
+    'checklist_preproduction_creative_url' => $preprodUrl ?: null,
+    'checklist_additional_documents' => $checklistAdditionalDocuments,
+    'checklist_additional_documents_by' => $additionalDocumentsBy,
+    'checklist_additional_documents_url' => $additionalDocumentsUrl ?: null,
     'skip_calendar_sync' => $skipCalendarSync,
 ];
 $syncResults = sync_booking_calendar($pdo, $freshBooking);

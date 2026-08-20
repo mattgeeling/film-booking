@@ -2,11 +2,15 @@
   const GOOGLE_CLIENT_ID = '1020593076419-tv5l93390dog560otm0o2p87h36vq1rs.apps.googleusercontent.com';
   const KIT_LABELS = { fuzzy_duck: 'Fuzzy Duck', mark: "Mark's", tom: "Tom's" };
   const CHECKLIST_ITEMS = [
-    { key: 'call_sheet', label: 'Call Sheet' },
-    { key: 'risk_assessment', label: 'Risk Assessment' },
-    { key: 'shot_list', label: 'Shot List' },
-    { key: 'preproduction_creative', label: 'Pre-production creative' },
+    { key: 'call_sheet', label: 'Call Sheet', required: true },
+    { key: 'risk_assessment', label: 'Risk Assessment', required: true },
+    { key: 'shot_list', label: 'Shot List', required: true, hasNotRequired: true },
+    { key: 'preproduction_creative', label: 'Pre-production creative', required: true },
   ];
+
+  function activeRequiredChecklistItems(booking) {
+    return CHECKLIST_ITEMS.filter((item) => item.required && !(item.hasNotRequired && booking['checklist_' + item.key + '_na']));
+  }
   const UNAVAILABLE_PERIOD_LABELS = { all_day: '', am: ' (AM)', pm: ' (PM)' };
   const UPCOMING_DAYS_AHEAD = 14;
 
@@ -88,7 +92,7 @@
     for (const b of bookings) {
       const issues = [];
       if (b.status === 'pencil') issues.push('Awaiting confirmation');
-      const missing = CHECKLIST_ITEMS.filter((item) => !b['checklist_' + item.key]).map((item) => item.label);
+      const missing = activeRequiredChecklistItems(b).filter((item) => !b['checklist_' + item.key]).map((item) => item.label);
       if (missing.length) issues.push(`Missing: ${missing.join(', ')}`);
       if (issues.length) {
         const start = new Date(b.start_datetime.replace(' ', 'T'));
@@ -109,9 +113,10 @@
 
   async function loadUpcomingPanel() {
     try {
-      const [blocked, unavailable] = await Promise.all([
+      const [blocked, unavailable, recurring] = await Promise.all([
         apiGet('api/blocked_days_list.php'),
         apiGet('api/person_unavailable_list.php'),
+        apiGet('api/person_recurring_unavailable_list.php'),
       ]);
 
       const today = new Date();
@@ -137,6 +142,20 @@
           meta: `${formatDateShort(d)}${u.reason ? ' — ' + u.reason : ''}`,
           sortKey: u.day + ' 1',
         });
+      }
+      if (recurring.length) {
+        for (let d = new Date(today); d <= windowEnd; d.setDate(d.getDate() + 1)) {
+          const weekday = d.getDay() === 0 ? 7 : d.getDay();
+          const dayIso = isoDate(d);
+          for (const r of recurring.filter((rule) => rule.weekday === weekday)) {
+            const period = UNAVAILABLE_PERIOD_LABELS[r.period] || '';
+            items.push({
+              title: `${r.person_name} unavailable${period}`,
+              meta: `${formatDateShort(d)}${r.reason ? ' — ' + r.reason : ''} (recurring)`,
+              sortKey: dayIso + ' 1',
+            });
+          }
+        }
       }
       items.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 

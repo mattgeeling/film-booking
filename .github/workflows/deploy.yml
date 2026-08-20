@@ -41,6 +41,7 @@ jobs:
                   'from_email' => 'production@fuzzyduck.co.uk',
                   'from_name' => 'Film Plan',
               ],
+              'base_url' => 'https://ducknest.co.uk/film-booking/public',
               'timezone' => 'Europe/London',
           ];
           PHP

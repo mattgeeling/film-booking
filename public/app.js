@@ -5,12 +5,18 @@
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const STATUS_LABELS = { pencil: '✎ Pencil', confirmed: '✓ Confirmed' };
   const UNAVAILABLE_PERIOD_LABELS = { all_day: 'All day', am: 'AM', pm: 'PM' };
+  const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const CHECKLIST_ITEMS = [
-    { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet' },
-    { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment' },
-    { key: 'shot_list', elKey: 'ShotList', label: 'Shot List' },
-    { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative' },
+    { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet', required: true },
+    { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment', required: true },
+    { key: 'shot_list', elKey: 'ShotList', label: 'Shot List', required: true, hasNotRequired: true },
+    { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative', required: true },
+    { key: 'additional_documents', elKey: 'AdditionalDocuments', label: 'Additional documents', required: false },
   ];
+
+  function activeRequiredChecklistItems(booking) {
+    return CHECKLIST_ITEMS.filter((item) => item.required && !(item.hasNotRequired && booking['checklist_' + item.key + '_na']));
+  }
   const GOOGLE_CLIENT_ID = '1020593076419-tv5l93390dog560otm0o2p87h36vq1rs.apps.googleusercontent.com';
 
   const state = {
@@ -20,6 +26,8 @@
     clients: [],
     blockedDaysByDate: {},
     unavailableByDate: {},
+    recurringUnavailability: [],
+    adminSubView: 'clients',
     kitUsagePageMonth: null,
     currentView: 'week',
     monthStr: null,
@@ -59,24 +67,31 @@
     fieldChecklistCallSheet: document.getElementById('fieldChecklistCallSheet'),
     fieldChecklistRiskAssessment: document.getElementById('fieldChecklistRiskAssessment'),
     fieldChecklistShotList: document.getElementById('fieldChecklistShotList'),
+    fieldChecklistShotListNa: document.getElementById('fieldChecklistShotListNa'),
     fieldChecklistPreproductionCreative: document.getElementById('fieldChecklistPreproductionCreative'),
+    fieldChecklistAdditionalDocuments: document.getElementById('fieldChecklistAdditionalDocuments'),
     fieldChecklistCallSheetBy: document.getElementById('fieldChecklistCallSheetBy'),
     fieldChecklistRiskAssessmentBy: document.getElementById('fieldChecklistRiskAssessmentBy'),
     fieldChecklistShotListBy: document.getElementById('fieldChecklistShotListBy'),
     fieldChecklistPreproductionCreativeBy: document.getElementById('fieldChecklistPreproductionCreativeBy'),
+    fieldChecklistAdditionalDocumentsBy: document.getElementById('fieldChecklistAdditionalDocumentsBy'),
     fieldChecklistCallSheetUrl: document.getElementById('fieldChecklistCallSheetUrl'),
     fieldChecklistRiskAssessmentUrl: document.getElementById('fieldChecklistRiskAssessmentUrl'),
     fieldChecklistShotListUrl: document.getElementById('fieldChecklistShotListUrl'),
     fieldChecklistPreproductionCreativeUrl: document.getElementById('fieldChecklistPreproductionCreativeUrl'),
+    fieldChecklistAdditionalDocumentsUrl: document.getElementById('fieldChecklistAdditionalDocumentsUrl'),
     fieldChecklistCallSheetUrlLink: document.getElementById('fieldChecklistCallSheetUrlLink'),
     fieldChecklistRiskAssessmentUrlLink: document.getElementById('fieldChecklistRiskAssessmentUrlLink'),
     fieldChecklistShotListUrlLink: document.getElementById('fieldChecklistShotListUrlLink'),
     fieldChecklistPreproductionCreativeUrlLink: document.getElementById('fieldChecklistPreproductionCreativeUrlLink'),
+    fieldChecklistAdditionalDocumentsUrlLink: document.getElementById('fieldChecklistAdditionalDocumentsUrlLink'),
+    openAllDocsBtn: document.getElementById('openAllDocsBtn'),
     formError: document.getElementById('formError'),
     cancelModalBtn: document.getElementById('cancelModalBtn'),
     deleteBookingBtn: document.getElementById('deleteBookingBtn'),
     confirmBookingBtn: document.getElementById('confirmBookingBtn'),
     unconfirmBookingBtn: document.getElementById('unconfirmBookingBtn'),
+    emailConfirmationBtn: document.getElementById('emailConfirmationBtn'),
     syncResults: document.getElementById('syncResults'),
     conflictWarning: document.getElementById('conflictWarning'),
     viewWeekBtn: document.getElementById('viewWeekBtn'),
@@ -101,7 +116,12 @@
     personEmail: document.getElementById('personEmail'),
     personFormError: document.getElementById('personFormError'),
     peopleTableBody: document.getElementById('peopleTableBody'),
-    viewClientsBtn: document.getElementById('viewClientsBtn'),
+    viewAdminBtn: document.getElementById('viewAdminBtn'),
+    adminView: document.getElementById('adminView'),
+    adminTabClientsBtn: document.getElementById('adminTabClientsBtn'),
+    adminTabKitUsageBtn: document.getElementById('adminTabKitUsageBtn'),
+    adminTabBlockedDaysBtn: document.getElementById('adminTabBlockedDaysBtn'),
+    adminTabNeedsPrepBtn: document.getElementById('adminTabNeedsPrepBtn'),
     clientsView: document.getElementById('clientsView'),
     clientForm: document.getElementById('clientForm'),
     clientName: document.getElementById('clientName'),
@@ -111,7 +131,6 @@
     kitUsagePanel: document.getElementById('kitUsagePanel'),
     kitUsageTitle: document.getElementById('kitUsageTitle'),
     kitUsageList: document.getElementById('kitUsageList'),
-    viewKitUsageBtn: document.getElementById('viewKitUsageBtn'),
     kitUsagePageView: document.getElementById('kitUsagePageView'),
     kitUsagePrevMonth: document.getElementById('kitUsagePrevMonth'),
     kitUsageThisMonth: document.getElementById('kitUsageThisMonth'),
@@ -119,13 +138,14 @@
     kitUsagePageMonthLabel: document.getElementById('kitUsagePageMonthLabel'),
     kitUsagePageSummary: document.getElementById('kitUsagePageSummary'),
     kitUsagePageTableBody: document.getElementById('kitUsagePageTableBody'),
-    viewBlockedDaysBtn: document.getElementById('viewBlockedDaysBtn'),
     blockedDaysView: document.getElementById('blockedDaysView'),
     blockedDayForm: document.getElementById('blockedDayForm'),
     blockedDayDate: document.getElementById('blockedDayDate'),
     blockedDayReason: document.getElementById('blockedDayReason'),
     blockedDayFormError: document.getElementById('blockedDayFormError'),
     blockedDaysTableBody: document.getElementById('blockedDaysTableBody'),
+    needsPrepView: document.getElementById('needsPrepView'),
+    needsPrepTableBody: document.getElementById('needsPrepTableBody'),
     authGate: document.getElementById('authGate'),
     appRoot: document.getElementById('appRoot'),
     googleSignInBtn: document.getElementById('googleSignInBtn'),
@@ -255,13 +275,15 @@
     return (clamped - GRID_START_HOUR) * PX_PER_HOUR;
   }
 
-  function buildBlockChecklistRow(booking, fieldKey, label) {
+  function buildBlockChecklistRow(booking, fieldKey, label, naFieldKey) {
     const row = document.createElement('label');
     row.className = 'b-checklist-item';
+    const isNa = naFieldKey ? !!booking[naFieldKey] : false;
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = !!booking[fieldKey];
+    checkbox.checked = isNa ? false : !!booking[fieldKey];
+    checkbox.disabled = isNa;
     checkbox.addEventListener('click', (e) => e.stopPropagation());
     checkbox.addEventListener('change', async () => {
       checkbox.disabled = true;
@@ -277,10 +299,14 @@
 
     const labelText = document.createElement('span');
     labelText.className = 'b-checklist-label';
-    labelText.textContent = label;
+    labelText.textContent = isNa ? `${label} (not required)` : label;
 
     row.appendChild(checkbox);
     row.appendChild(labelText);
+
+    if (isNa) {
+      return row;
+    }
 
     const url = booking[fieldKey + '_url'];
     if (url) {
@@ -387,10 +413,11 @@
     const names = booking.attendees.map((a) => a.name).join(', ');
     metaEl.textContent = `${formatTime(start)}–${formatTime(end)}${names ? ' · ' + names : ''}`;
 
-    const prepDone = CHECKLIST_ITEMS.filter((item) => booking['checklist_' + item.key]).length;
+    const requiredItems = activeRequiredChecklistItems(booking);
+    const prepDone = requiredItems.filter((item) => booking['checklist_' + item.key]).length;
     const prepEl = document.createElement('span');
-    prepEl.className = 'b-prep' + (prepDone === CHECKLIST_ITEMS.length ? ' complete' : '');
-    prepEl.textContent = `Prep ${prepDone}/${CHECKLIST_ITEMS.length}`;
+    prepEl.className = 'b-prep' + (prepDone === requiredItems.length ? ' complete' : '');
+    prepEl.textContent = `Prep ${prepDone}/${requiredItems.length}`;
 
     let noSyncEl = null;
     if (booking.skip_calendar_sync) {
@@ -853,6 +880,9 @@
     if (state.currentView === 'month') {
       await loadMonth();
     }
+    if (state.currentView === 'admin' && state.adminSubView === 'needsPrep') {
+      await loadNeedsPrepTable();
+    }
   }
 
   function findLoadedBooking(id) {
@@ -873,6 +903,24 @@
     for (const row of rows) {
       (state.unavailableByDate[row.day] = state.unavailableByDate[row.day] || []).push(row);
     }
+  }
+
+  async function loadRecurringUnavailability() {
+    state.recurringUnavailability = await apiGet('api/person_recurring_unavailable_list.php');
+  }
+
+  function isoWeekdayOf(dateObj) {
+    const jsDay = dateObj.getDay();
+    return jsDay === 0 ? 7 : jsDay;
+  }
+
+  function unavailableEntriesForDate(dateIso) {
+    const explicit = state.unavailableByDate[dateIso] || [];
+    const weekday = isoWeekdayOf(new Date(dateIso + 'T00:00:00'));
+    const recurring = state.recurringUnavailability
+      .filter((r) => r.weekday === weekday)
+      .map((r) => ({ person_id: r.person_id, person_name: r.person_name, period: r.period, reason: r.reason, recurring: true }));
+    return explicit.concat(recurring);
   }
 
   async function onDayLockClick(dateIso, e) {
@@ -935,6 +983,54 @@
       row.appendChild(reasonCell);
       row.appendChild(actionsCell);
       el.blockedDaysTableBody.appendChild(row);
+    }
+  }
+
+  async function loadNeedsPrepTable() {
+    const data = await apiGet('api/bookings_needs_prep.php');
+    el.needsPrepTableBody.innerHTML = '';
+    if (data.bookings.length === 0) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 5;
+      cell.textContent = 'Nothing outstanding — every upcoming booking is fully prepped.';
+      cell.className = 'muted-note';
+      row.appendChild(cell);
+      el.needsPrepTableBody.appendChild(row);
+      return;
+    }
+    for (const booking of data.bookings) {
+      const row = document.createElement('tr');
+      row.className = 'clickable-row';
+      row.addEventListener('click', () => openEditModal(booking));
+
+      const dateCell = document.createElement('td');
+      const start = new Date(booking.start_datetime.replace(' ', 'T'));
+      dateCell.textContent = start.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+      const titleCell = document.createElement('td');
+      titleCell.textContent = booking.title;
+
+      const clientCell = document.createElement('td');
+      clientCell.textContent = booking.client_name || '';
+
+      const statusCell = document.createElement('td');
+      const pill = document.createElement('span');
+      pill.className = `prep-status-pill status-${booking.status}`;
+      pill.textContent = STATUS_LABELS[booking.status] || booking.status;
+      statusCell.appendChild(pill);
+
+      const missingCell = document.createElement('td');
+      missingCell.className = 'needs-prep-missing';
+      const missing = activeRequiredChecklistItems(booking).filter((item) => !booking['checklist_' + item.key]).map((item) => item.label);
+      missingCell.textContent = missing.join(', ');
+
+      row.appendChild(dateCell);
+      row.appendChild(titleCell);
+      row.appendChild(clientCell);
+      row.appendChild(statusCell);
+      row.appendChild(missingCell);
+      el.needsPrepTableBody.appendChild(row);
     }
   }
 
@@ -1006,6 +1102,31 @@
     }
   }
 
+  function updateShotListNaState() {
+    const na = el.fieldChecklistShotListNa.checked;
+    if (na) {
+      el.fieldChecklistShotList.checked = false;
+      setChecklistBy(el.fieldChecklistShotListBy, null);
+    }
+    el.fieldChecklistShotList.disabled = na;
+    el.fieldChecklistShotListUrl.disabled = na;
+    el.fieldChecklistShotListUrl.value = na ? '' : el.fieldChecklistShotListUrl.value;
+    updateChecklistUrlLink(CHECKLIST_ITEMS.find((item) => item.key === 'shot_list'));
+  }
+
+  function openAllAttachedDocuments() {
+    const urls = CHECKLIST_ITEMS
+      .map((item) => el['fieldChecklist' + item.elKey + 'Url'].value.trim())
+      .filter(Boolean);
+    if (!urls.length) {
+      alert('No documents attached to this booking yet.');
+      return;
+    }
+    for (const url of urls) {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
   let conflictCheckTimer = null;
   function scheduleConflictCheck() {
     clearTimeout(conflictCheckTimer);
@@ -1030,7 +1151,7 @@
     } catch (err) {
       return; // silent — this is a convenience check, not critical path
     }
-    const unavailable = (state.unavailableByDate[el.fieldDate.value] || [])
+    const unavailable = unavailableEntriesForDate(el.fieldDate.value)
       .filter((u) => attendeeIds.includes(u.person_id) &&
         unavailabilityOverlapsTime(u.period, el.fieldStart.value, el.fieldEnd.value));
 
@@ -1092,10 +1213,14 @@
       setChecklistBy(el['fieldChecklist' + item.elKey + 'By'], null);
       updateChecklistUrlLink(item);
     }
+    el.fieldChecklistShotListNa.checked = false;
+    updateShotListNaState();
+    el.openAllDocsBtn.classList.add('hidden');
     el.fieldSkipCalendarSync.checked = false;
     el.deleteBookingBtn.classList.add('hidden');
     el.confirmBookingBtn.classList.add('hidden');
     el.unconfirmBookingBtn.classList.add('hidden');
+    el.emailConfirmationBtn.classList.add('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1125,6 +1250,10 @@
       setChecklistBy(el['fieldChecklist' + item.elKey + 'By'], done ? booking['checklist_' + item.key + '_by'] : null);
       updateChecklistUrlLink(item);
     }
+    el.fieldChecklistShotListNa.checked = !!booking.checklist_shot_list_na;
+    updateShotListNaState();
+    const anyDocUrl = CHECKLIST_ITEMS.some((item) => booking['checklist_' + item.key + '_url']);
+    el.openAllDocsBtn.classList.toggle('hidden', !anyDocUrl);
     el.fieldSkipCalendarSync.checked = !!booking.skip_calendar_sync;
     const attendeeIds = new Set(booking.attendees.map((a) => a.id));
     for (const opt of el.fieldAttendees.options) {
@@ -1134,6 +1263,7 @@
     el.deleteBookingBtn.textContent = booking.status === 'confirmed' ? 'Cancel booking' : 'Delete';
     el.confirmBookingBtn.classList.toggle('hidden', booking.status !== 'pencil');
     el.unconfirmBookingBtn.classList.toggle('hidden', booking.status !== 'confirmed');
+    el.emailConfirmationBtn.classList.toggle('hidden', booking.status !== 'confirmed');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1176,6 +1306,7 @@
       payload['checklist_' + item.key] = el['fieldChecklist' + item.elKey].checked;
       payload['checklist_' + item.key + '_url'] = el['fieldChecklist' + item.elKey + 'Url'].value.trim();
     }
+    payload.checklist_shot_list_na = el.fieldChecklistShotListNa.checked;
 
     try {
       let data;
@@ -1221,15 +1352,29 @@
       const updated = findLoadedBooking(state.editingId);
       if (updated) openEditModal(updated);
       showSyncResults(data.results);
-      const emailFailures = (data.email_results || []).filter((r) => r.status === 'error');
-      if (emailFailures.length) {
-        alert('Booking confirmed, but some confirmation emails failed to send:\n' +
-          emailFailures.map((r) => `${r.person}: ${r.error}`).join('\n'));
-      }
     } catch (err) {
       showFormError(err.message);
     } finally {
       el.confirmBookingBtn.disabled = false;
+    }
+  }
+
+  async function onEmailConfirmationClick() {
+    if (!state.editingId) return;
+    el.emailConfirmationBtn.disabled = true;
+    try {
+      const data = await apiPost(`api/bookings_email_confirmation.php?id=${state.editingId}`);
+      const failures = (data.email_results || []).filter((r) => r.status === 'error');
+      if (failures.length) {
+        alert('Some confirmation emails failed to send:\n' +
+          failures.map((r) => `${r.person}: ${r.error}`).join('\n'));
+      } else {
+        alert(`Confirmation email sent to ${data.email_results.length} attendee${data.email_results.length === 1 ? '' : 's'}.`);
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      el.emailConfirmationBtn.disabled = false;
     }
   }
 
@@ -1266,15 +1411,11 @@
     const isWeek = view === 'week';
     const isMonth = view === 'month';
     const isPeople = view === 'people';
-    const isClients = view === 'clients';
-    const isKitUsage = view === 'kitUsage';
-    const isBlockedDays = view === 'blockedDays';
+    const isAdmin = view === 'admin';
     el.viewWeekBtn.classList.toggle('active', isWeek);
     el.viewMonthBtn.classList.toggle('active', isMonth);
     el.viewPeopleBtn.classList.toggle('active', isPeople);
-    el.viewClientsBtn.classList.toggle('active', isClients);
-    el.viewKitUsageBtn.classList.toggle('active', isKitUsage);
-    el.viewBlockedDaysBtn.classList.toggle('active', isBlockedDays);
+    el.viewAdminBtn.classList.toggle('active', isAdmin);
     el.weekBody.classList.toggle('hidden', !isWeek);
     el.weekControls.classList.toggle('hidden', !isWeek);
     el.weekLegend.classList.toggle('hidden', !isWeek && !isMonth);
@@ -1282,15 +1423,31 @@
     el.downloadWeekBtn.classList.toggle('hidden', !isWeek);
     el.monthView.classList.toggle('hidden', !isMonth);
     el.peopleView.classList.toggle('hidden', !isPeople);
+    el.adminView.classList.toggle('hidden', !isAdmin);
+    el.kitUsagePanel.classList.toggle('hidden', !isWeek);
+    if (isPeople) loadPeopleTable();
+    if (isAdmin) switchAdminSubView(state.adminSubView);
+    if (isMonth) loadMonth();
+  }
+
+  function switchAdminSubView(subView) {
+    state.adminSubView = subView;
+    const isClients = subView === 'clients';
+    const isKitUsage = subView === 'kitUsage';
+    const isBlockedDays = subView === 'blockedDays';
+    const isNeedsPrep = subView === 'needsPrep';
+    el.adminTabClientsBtn.classList.toggle('active', isClients);
+    el.adminTabKitUsageBtn.classList.toggle('active', isKitUsage);
+    el.adminTabBlockedDaysBtn.classList.toggle('active', isBlockedDays);
+    el.adminTabNeedsPrepBtn.classList.toggle('active', isNeedsPrep);
     el.clientsView.classList.toggle('hidden', !isClients);
     el.kitUsagePageView.classList.toggle('hidden', !isKitUsage);
     el.blockedDaysView.classList.toggle('hidden', !isBlockedDays);
-    el.kitUsagePanel.classList.toggle('hidden', !isWeek);
-    if (isPeople) loadPeopleTable();
+    el.needsPrepView.classList.toggle('hidden', !isNeedsPrep);
     if (isClients) loadClientsTable();
     if (isKitUsage) loadKitUsagePage();
     if (isBlockedDays) loadBlockedDaysTable();
-    if (isMonth) loadMonth();
+    if (isNeedsPrep) loadNeedsPrepTable();
   }
 
   function hidePersonFormError() {
@@ -1381,6 +1538,76 @@
 
     panel.appendChild(form);
     panel.appendChild(errorEl);
+
+    const recurringHeading = document.createElement('h4');
+    recurringHeading.className = 'unavailable-panel-subheading';
+    recurringHeading.textContent = 'Recurring weekly';
+    panel.appendChild(recurringHeading);
+
+    const recurringList = document.createElement('div');
+    recurringList.className = 'unavailable-list recurring-list';
+    panel.appendChild(recurringList);
+
+    const recurringForm = document.createElement('form');
+    recurringForm.className = 'unavailable-form';
+
+    const weekdaySelect = document.createElement('select');
+    WEEKDAY_LABELS.forEach((label, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i + 1);
+      opt.textContent = label;
+      weekdaySelect.appendChild(opt);
+    });
+
+    const recurringPeriodSelect = document.createElement('select');
+    for (const [value, label] of [['all_day', 'All day'], ['am', 'Morning (AM)'], ['pm', 'Afternoon (PM)']]) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      recurringPeriodSelect.appendChild(opt);
+    }
+
+    const recurringReasonInput = document.createElement('input');
+    recurringReasonInput.type = 'text';
+    recurringReasonInput.placeholder = 'Reason (optional)';
+
+    const recurringAddBtn = document.createElement('button');
+    recurringAddBtn.type = 'submit';
+    recurringAddBtn.className = 'primary';
+    recurringAddBtn.textContent = `Add recurring rule`;
+
+    recurringForm.appendChild(weekdaySelect);
+    recurringForm.appendChild(recurringPeriodSelect);
+    recurringForm.appendChild(recurringReasonInput);
+    recurringForm.appendChild(recurringAddBtn);
+
+    const recurringErrorEl = document.createElement('p');
+    recurringErrorEl.className = 'form-error hidden';
+
+    recurringForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      recurringErrorEl.classList.add('hidden');
+      try {
+        await apiPost('api/person_recurring_unavailable_create.php', {
+          person_id: person.id,
+          weekday: Number(weekdaySelect.value),
+          period: recurringPeriodSelect.value,
+          reason: recurringReasonInput.value.trim(),
+        });
+        recurringReasonInput.value = '';
+        recurringPeriodSelect.value = 'all_day';
+        await refreshRecurringPanel(recurringList, person);
+        await loadRecurringUnavailability();
+        await refreshBookings();
+      } catch (err) {
+        recurringErrorEl.textContent = err.message;
+        recurringErrorEl.classList.remove('hidden');
+      }
+    });
+
+    panel.appendChild(recurringForm);
+    panel.appendChild(recurringErrorEl);
+
     td.appendChild(panel);
     tr.appendChild(td);
     return tr;
@@ -1419,6 +1646,37 @@
     }
   }
 
+  async function refreshRecurringPanel(list, person) {
+    list.innerHTML = '';
+    const rows = await apiGet(`api/person_recurring_unavailable_list.php?person_id=${person.id}`);
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'muted-note';
+      empty.textContent = 'No recurring rules.';
+      list.appendChild(empty);
+      return;
+    }
+    for (const r of rows) {
+      const item = document.createElement('div');
+      item.className = 'unavailable-item';
+      const label = document.createElement('span');
+      const periodSuffix = r.period !== 'all_day' ? ` (${UNAVAILABLE_PERIOD_LABELS[r.period]})` : '';
+      label.textContent = `Every ${WEEKDAY_LABELS[r.weekday - 1]}` + periodSuffix + (r.reason ? ` — ${r.reason}` : '');
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', async () => {
+        await apiPost(`api/person_recurring_unavailable_delete.php?id=${r.id}`);
+        await refreshRecurringPanel(list, person);
+        await loadRecurringUnavailability();
+        await refreshBookings();
+      });
+      item.appendChild(label);
+      item.appendChild(removeBtn);
+      list.appendChild(item);
+    }
+  }
+
   function buildAvatarEl(name, extraClass, personId) {
     const el = document.createElement('span');
     el.className = 'avatar-circle' + (extraClass ? ' ' + extraClass : '');
@@ -1428,7 +1686,7 @@
   }
 
   function buildUnavailableBadge(dateIso) {
-    const unavailable = state.unavailableByDate[dateIso] || [];
+    const unavailable = unavailableEntriesForDate(dateIso);
     if (!unavailable.length) return null;
     const badge = document.createElement('div');
     badge.className = 'day-unavailable-row';
@@ -1490,6 +1748,7 @@
       const nowVisible = panelRow.classList.toggle('hidden') === false;
       if (nowVisible) {
         refreshUnavailablePanel(panelRow.querySelector('.unavailable-list'), person);
+        refreshRecurringPanel(panelRow.querySelector('.recurring-list'), person);
       }
     });
 
@@ -1747,9 +2006,11 @@
   el.filterKit.addEventListener('change', onFilterChange);
   el.clearFiltersBtn.addEventListener('click', clearFilters);
   el.viewPeopleBtn.addEventListener('click', () => switchView('people'));
-  el.viewClientsBtn.addEventListener('click', () => switchView('clients'));
-  el.viewKitUsageBtn.addEventListener('click', () => switchView('kitUsage'));
-  el.viewBlockedDaysBtn.addEventListener('click', () => switchView('blockedDays'));
+  el.viewAdminBtn.addEventListener('click', () => switchView('admin'));
+  el.adminTabClientsBtn.addEventListener('click', () => switchAdminSubView('clients'));
+  el.adminTabKitUsageBtn.addEventListener('click', () => switchAdminSubView('kitUsage'));
+  el.adminTabBlockedDaysBtn.addEventListener('click', () => switchAdminSubView('blockedDays'));
+  el.adminTabNeedsPrepBtn.addEventListener('click', () => switchAdminSubView('needsPrep'));
   el.kitUsagePrevMonth.addEventListener('click', () => shiftKitUsagePageMonth(-1));
   el.kitUsageNextMonth.addEventListener('click', () => shiftKitUsagePageMonth(1));
   el.kitUsageThisMonth.addEventListener('click', () => {
@@ -1767,6 +2028,8 @@
   for (const item of CHECKLIST_ITEMS) {
     el['fieldChecklist' + item.elKey + 'Url'].addEventListener('input', () => updateChecklistUrlLink(item));
   }
+  el.fieldChecklistShotListNa.addEventListener('change', updateShotListNaState);
+  el.openAllDocsBtn.addEventListener('click', openAllAttachedDocuments);
   el.personForm.addEventListener('submit', onPersonFormSubmit);
 
   el.prevWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); loadWeek(); });
@@ -1780,6 +2043,7 @@
   el.deleteBookingBtn.addEventListener('click', onDeleteClick);
   el.confirmBookingBtn.addEventListener('click', onConfirmClick);
   el.unconfirmBookingBtn.addEventListener('click', onUnconfirmClick);
+  el.emailConfirmationBtn.addEventListener('click', onEmailConfirmationClick);
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -1819,6 +2083,7 @@
     await loadClients();
     await loadBlockedDays();
     await loadUnavailability();
+    await loadRecurringUnavailability();
     await loadWeek();
   }
 

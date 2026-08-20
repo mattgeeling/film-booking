@@ -86,11 +86,16 @@ final class GoogleCalendarService
         $checklist = [
             'Call Sheet' => ['done' => !empty($booking['checklist_call_sheet']), 'by' => $booking['checklist_call_sheet_by'] ?? null, 'url' => $booking['checklist_call_sheet_url'] ?? null],
             'Risk Assessment' => ['done' => !empty($booking['checklist_risk_assessment']), 'by' => $booking['checklist_risk_assessment_by'] ?? null, 'url' => $booking['checklist_risk_assessment_url'] ?? null],
-            'Shot List' => ['done' => !empty($booking['checklist_shot_list']), 'by' => $booking['checklist_shot_list_by'] ?? null, 'url' => $booking['checklist_shot_list_url'] ?? null],
+            'Shot List' => ['done' => !empty($booking['checklist_shot_list']), 'by' => $booking['checklist_shot_list_by'] ?? null, 'url' => $booking['checklist_shot_list_url'] ?? null, 'na' => !empty($booking['checklist_shot_list_na'])],
             'Pre-production creative' => ['done' => !empty($booking['checklist_preproduction_creative']), 'by' => $booking['checklist_preproduction_creative_by'] ?? null, 'url' => $booking['checklist_preproduction_creative_url'] ?? null],
+            'Additional documents' => ['done' => !empty($booking['checklist_additional_documents']), 'by' => $booking['checklist_additional_documents_by'] ?? null, 'url' => $booking['checklist_additional_documents_url'] ?? null],
         ];
         $checklistLines = [];
         foreach ($checklist as $label => $item) {
+            if (!empty($item['na'])) {
+                $checklistLines[] = '➖ ' . $label . ' — Not required';
+                continue;
+            }
             $line = ($item['done'] ? '✅' : '⬜') . ' ' . $label;
             if ($item['done'] && $item['by']) {
                 $line .= ' — ' . $item['by'];

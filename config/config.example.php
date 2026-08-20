@@ -24,5 +24,9 @@ return [
         'from_name' => 'Film Plan',
     ],
 
+    // Public base URL of the deployed app (no trailing slash) — used to link
+    // to assets like the logo from emails.
+    'base_url' => 'https://ducknest.co.uk/film-booking/public',
+
     'timezone' => 'Europe/London',
 ];
