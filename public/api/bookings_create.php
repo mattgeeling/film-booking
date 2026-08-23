@@ -9,6 +9,7 @@ $body = json_body();
 $title = trim((string) ($body['title'] ?? ''));
 $location = trim((string) ($body['location'] ?? ''));
 $what3words = trim((string) ($body['what3words'] ?? ''));
+$shootPrepFolderUrl = trim((string) ($body['shoot_prep_folder_url'] ?? ''));
 $clientId = !empty($body['client_id']) ? (int) $body['client_id'] : null;
 $notes = trim((string) ($body['notes'] ?? ''));
 $start = (string) ($body['start_datetime'] ?? '');
@@ -84,14 +85,14 @@ if ($clientId !== null) {
 $pdo->beginTransaction();
 try {
     $stmt = $pdo->prepare(
-        'INSERT INTO bookings (title, location, what3words, client_id, notes, start_datetime, end_datetime, status, created_by, created_by_name,
+        'INSERT INTO bookings (title, location, what3words, shoot_prep_folder_url, client_id, notes, start_datetime, end_datetime, status, created_by, created_by_name,
             checklist_call_sheet, checklist_call_sheet_by, checklist_call_sheet_url,
             checklist_risk_assessment, checklist_risk_assessment_by, checklist_risk_assessment_url,
             checklist_shot_list, checklist_shot_list_by, checklist_shot_list_url, checklist_shot_list_na,
             checklist_preproduction_creative, checklist_preproduction_creative_by, checklist_preproduction_creative_url,
             checklist_additional_documents, checklist_additional_documents_by, checklist_additional_documents_url,
             skip_calendar_sync, kit_source)
-         VALUES (:title, :location, :what3words, :client_id, :notes, :start, :end, "pencil", :created_by, :created_by_name,
+         VALUES (:title, :location, :what3words, :shoot_prep_folder_url, :client_id, :notes, :start, :end, "pencil", :created_by, :created_by_name,
             :call_sheet, :call_sheet_by, :call_sheet_url,
             :risk, :risk_by, :risk_url, :shot_list, :shot_list_by, :shot_list_url, :shot_list_na,
             :preprod, :preprod_by, :preprod_url,
@@ -101,6 +102,7 @@ try {
         'title' => $title,
         'location' => $location ?: null,
         'what3words' => $what3words ?: null,
+        'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
         'client_id' => $clientId,
         'notes' => $notes ?: null,
         'start' => $startDt->format('Y-m-d H:i:s'),
@@ -143,6 +145,7 @@ $freshBooking = [
     'id' => $bookingId,
     'title' => $title,
     'location' => $location ?: null,
+    'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
     'notes' => $notes ?: null,
     'start_datetime' => $startDt->format('Y-m-d H:i:s'),
     'end_datetime' => $endDt->format('Y-m-d H:i:s'),

@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS people (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name       VARCHAR(100)  NOT NULL,
   role       VARCHAR(100)  NULL,
+  is_main_shooter TINYINT(1) NOT NULL DEFAULT 0,
   email      VARCHAR(255)  NOT NULL UNIQUE,
   active     TINYINT(1)    NOT NULL DEFAULT 1,
   created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,11 +23,14 @@ CREATE TABLE IF NOT EXISTS bookings (
   title          VARCHAR(255) NOT NULL,
   location       VARCHAR(255) NULL,
   what3words     VARCHAR(255) NULL,
+  shoot_prep_folder_url VARCHAR(500) NULL,
   client_id      INT UNSIGNED NULL,
   notes          TEXT NULL,
   start_datetime DATETIME NOT NULL,
   end_datetime   DATETIME NOT NULL,
   status         ENUM('pencil','confirmed','cancelled') NOT NULL DEFAULT 'pencil',
+  is_standalone_doc TINYINT(1) NOT NULL DEFAULT 0,
+  doc_type       VARCHAR(20) NULL,
   checklist_call_sheet             TINYINT(1)   NOT NULL DEFAULT 0,
   checklist_call_sheet_by          VARCHAR(255) NULL,
   checklist_call_sheet_url         VARCHAR(500) NULL,
@@ -124,11 +128,15 @@ CREATE TABLE IF NOT EXISTS call_sheets (
   parking_notes           TEXT NULL,
   weather_summary         TEXT NULL,
   weather_icons           JSON NULL,
+  weather_location        VARCHAR(500) NULL,
+  sunrise_sunset          VARCHAR(100) NULL,
+  weather_location_override VARCHAR(255) NULL,
   production_crew         JSON NULL,
   client_contacts         JSON NULL,
   equipment               JSON NULL,
   schedule                JSON NULL,
   nearest_ae              TEXT NULL,
+  location_map            MEDIUMTEXT NULL,
   created_by              VARCHAR(255) NULL,
   created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -170,6 +178,16 @@ CREATE TABLE IF NOT EXISTS risk_assessments (
   created_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS ra_templates (
+  id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name                   VARCHAR(255) NOT NULL,
+  standard_arrangements  JSON NULL,
+  hazards                JSON NULL,
+  created_by             VARCHAR(255) NULL,
+  created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS app_users (

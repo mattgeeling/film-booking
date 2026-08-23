@@ -167,6 +167,9 @@ function render_confirmation_email_html(
     if (!empty($booking['what3words'])) {
         $addDetail('what3words', $e($booking['what3words']));
     }
+    if (!empty($booking['shoot_prep_folder_url'])) {
+        $addDetail('Shoot Prep folder', '<a href="' . $e($booking['shoot_prep_folder_url']) . '" style="color:#8a6d00;font-weight:600;text-decoration:none;">&#128193; Open folder &rarr;</a>');
+    }
     if ($otherNames) {
         $addDetail('With', $e(implode(', ', $otherNames)));
     }

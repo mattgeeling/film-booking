@@ -26,6 +26,7 @@ if ($booking['status'] === 'cancelled') {
 $title = trim((string) ($body['title'] ?? $booking['title']));
 $location = trim((string) ($body['location'] ?? ($booking['location'] ?? '')));
 $what3words = trim((string) ($body['what3words'] ?? ($booking['what3words'] ?? '')));
+$shootPrepFolderUrl = trim((string) ($body['shoot_prep_folder_url'] ?? ($booking['shoot_prep_folder_url'] ?? '')));
 $clientId = array_key_exists('client_id', $body)
     ? (!empty($body['client_id']) ? (int) $body['client_id'] : null)
     : $booking['client_id'];
@@ -128,6 +129,7 @@ $pdo->beginTransaction();
 try {
     $stmt = $pdo->prepare(
         'UPDATE bookings SET title = :title, location = :location, what3words = :what3words,
+         shoot_prep_folder_url = :shoot_prep_folder_url,
          client_id = :client_id, notes = :notes,
          start_datetime = :start, end_datetime = :end,
          checklist_call_sheet = :call_sheet, checklist_call_sheet_by = :call_sheet_by, checklist_call_sheet_url = :call_sheet_url,
@@ -142,6 +144,7 @@ try {
         'title' => $title,
         'location' => $location ?: null,
         'what3words' => $what3words ?: null,
+        'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
         'client_id' => $clientId,
         'notes' => $notes ?: null,
         'start' => $startDt->format('Y-m-d H:i:s'),
@@ -184,6 +187,7 @@ try {
 $freshBooking = array_merge($booking, [
     'title' => $title,
     'location' => $location ?: null,
+    'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
     'notes' => $notes ?: null,
     'start_datetime' => $startDt->format('Y-m-d H:i:s'),
     'end_datetime' => $endDt->format('Y-m-d H:i:s'),

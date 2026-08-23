@@ -46,7 +46,7 @@ function hydrate_bookings(PDO $pdo, array $bookings): array
     return $bookings;
 }
 
-const BOOKING_SELECT_COLUMNS = 'b.id, b.title, b.location, b.what3words, b.notes, b.start_datetime, b.end_datetime, b.status,
+const BOOKING_SELECT_COLUMNS = 'b.id, b.title, b.location, b.what3words, b.shoot_prep_folder_url, b.notes, b.start_datetime, b.end_datetime, b.status,
     b.checklist_call_sheet, b.checklist_call_sheet_by, b.checklist_call_sheet_url,
     b.checklist_risk_assessment, b.checklist_risk_assessment_by, b.checklist_risk_assessment_url,
     b.checklist_shot_list, b.checklist_shot_list_by, b.checklist_shot_list_url, b.checklist_shot_list_na,

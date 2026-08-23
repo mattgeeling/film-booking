@@ -31,6 +31,9 @@
     callSheetBooking: null,
     shotListBooking: null,
     riskAssessmentBooking: null,
+    standaloneDocType: null,
+    emailPreviewKind: 'booking',
+    emailPreviewBookingId: null,
     kitUsagePageMonth: null,
     currentView: 'week',
     monthStr: null,
@@ -62,6 +65,8 @@
     fieldLocationMapsLink: document.getElementById('fieldLocationMapsLink'),
     fieldWhat3Words: document.getElementById('fieldWhat3Words'),
     fieldWhat3WordsLink: document.getElementById('fieldWhat3WordsLink'),
+    fieldShootPrepFolderUrl: document.getElementById('fieldShootPrepFolderUrl'),
+    fieldShootPrepFolderLink: document.getElementById('fieldShootPrepFolderLink'),
     fieldClient: document.getElementById('fieldClient'),
     fieldKitSource: document.getElementById('fieldKitSource'),
     fieldAttendees: document.getElementById('fieldAttendees'),
@@ -89,12 +94,14 @@
     fieldChecklistPreproductionCreativeUrlLink: document.getElementById('fieldChecklistPreproductionCreativeUrlLink'),
     fieldChecklistAdditionalDocumentsUrlLink: document.getElementById('fieldChecklistAdditionalDocumentsUrlLink'),
     openAllDocsBtn: document.getElementById('openAllDocsBtn'),
+    openAllDocsList: document.getElementById('openAllDocsList'),
     formError: document.getElementById('formError'),
     cancelModalBtn: document.getElementById('cancelModalBtn'),
     deleteBookingBtn: document.getElementById('deleteBookingBtn'),
     confirmBookingBtn: document.getElementById('confirmBookingBtn'),
     unconfirmBookingBtn: document.getElementById('unconfirmBookingBtn'),
     emailConfirmationBtn: document.getElementById('emailConfirmationBtn'),
+    emailCallSheetBtn: document.getElementById('emailCallSheetBtn'),
     emailPreviewBackdrop: document.getElementById('emailPreviewBackdrop'),
     emailPreviewRecipients: document.getElementById('emailPreviewRecipients'),
     emailPreviewSubject: document.getElementById('emailPreviewSubject'),
@@ -105,15 +112,24 @@
     openCallSheetBtn: document.getElementById('openCallSheetBtn'),
     callSheetBackdrop: document.getElementById('callSheetBackdrop'),
     callSheetTitle: document.getElementById('callSheetTitle'),
+    csShootDateRow: document.getElementById('csShootDateRow'),
+    csShootDate: document.getElementById('csShootDate'),
+    csCopyFromSelect: document.getElementById('csCopyFromSelect'),
+    csCopyFromBtn: document.getElementById('csCopyFromBtn'),
+    csCopyFromNote: document.getElementById('csCopyFromNote'),
     csDayInfo: document.getElementById('csDayInfo'),
     csLocationContactName: document.getElementById('csLocationContactName'),
     csLocationContactPhone: document.getElementById('csLocationContactPhone'),
     csParkingNotes: document.getElementById('csParkingNotes'),
     csFetchWeatherBtn: document.getElementById('csFetchWeatherBtn'),
     csWeatherError: document.getElementById('csWeatherError'),
+    csWeatherLocationOverride: document.getElementById('csWeatherLocationOverride'),
+    csWeatherLocationNote: document.getElementById('csWeatherLocationNote'),
     csWeatherIconPreview: document.getElementById('csWeatherIconPreview'),
     csWeatherSummary: document.getElementById('csWeatherSummary'),
     csWeatherIcons: document.getElementById('csWeatherIcons'),
+    csWeatherLocation: document.getElementById('csWeatherLocation'),
+    csSunriseSunset: document.getElementById('csSunriseSunset'),
     csProductionRows: document.getElementById('csProductionRows'),
     csAddProductionRow: document.getElementById('csAddProductionRow'),
     csClientRows: document.getElementById('csClientRows'),
@@ -123,6 +139,14 @@
     csScheduleRows: document.getElementById('csScheduleRows'),
     csAddScheduleRow: document.getElementById('csAddScheduleRow'),
     csNearestAe: document.getElementById('csNearestAe'),
+    csLoadMapBtn: document.getElementById('csLoadMapBtn'),
+    csMapError: document.getElementById('csMapError'),
+    csLocationMapPreview: document.getElementById('csLocationMapPreview'),
+    csLocationMap: document.getElementById('csLocationMap'),
+    csFindHospitalBtn: document.getElementById('csFindHospitalBtn'),
+    csHospitalError: document.getElementById('csHospitalError'),
+    csHospitalCandidates: document.getElementById('csHospitalCandidates'),
+    csUseHospitalBtn: document.getElementById('csUseHospitalBtn'),
     callSheetError: document.getElementById('callSheetError'),
     callSheetSavedNote: document.getElementById('callSheetSavedNote'),
     cancelCallSheetBtn: document.getElementById('cancelCallSheetBtn'),
@@ -144,6 +168,13 @@
     openRiskAssessmentBtn: document.getElementById('openRiskAssessmentBtn'),
     riskAssessmentBackdrop: document.getElementById('riskAssessmentBackdrop'),
     riskAssessmentTitle: document.getElementById('riskAssessmentTitle'),
+    raShootDateRow: document.getElementById('raShootDateRow'),
+    raShootDate: document.getElementById('raShootDate'),
+    raTemplateSelect: document.getElementById('raTemplateSelect'),
+    raLoadTemplateBtn: document.getElementById('raLoadTemplateBtn'),
+    raDeleteTemplateBtn: document.getElementById('raDeleteTemplateBtn'),
+    raSaveTemplateBtn: document.getElementById('raSaveTemplateBtn'),
+    raTemplateNote: document.getElementById('raTemplateNote'),
     raClientName: document.getElementById('raClientName'),
     raLocationContact: document.getElementById('raLocationContact'),
     raDirectorName: document.getElementById('raDirectorName'),
@@ -156,6 +187,10 @@
     raCrewExperts: document.getElementById('raCrewExperts'),
     raStandardRows: document.getElementById('raStandardRows'),
     raNearestAe: document.getElementById('raNearestAe'),
+    raFindHospitalBtn: document.getElementById('raFindHospitalBtn'),
+    raHospitalError: document.getElementById('raHospitalError'),
+    raHospitalCandidates: document.getElementById('raHospitalCandidates'),
+    raUseHospitalBtn: document.getElementById('raUseHospitalBtn'),
     raHazardRows: document.getElementById('raHazardRows'),
     raAddHazardRow: document.getElementById('raAddHazardRow'),
     raSignoffDirectorName: document.getElementById('raSignoffDirectorName'),
@@ -190,6 +225,7 @@
     personName: document.getElementById('personName'),
     personRole: document.getElementById('personRole'),
     personEmail: document.getElementById('personEmail'),
+    personIsMainShooter: document.getElementById('personIsMainShooter'),
     personFormError: document.getElementById('personFormError'),
     peopleTableBody: document.getElementById('peopleTableBody'),
     viewAdminBtn: document.getElementById('viewAdminBtn'),
@@ -574,7 +610,13 @@
     const fmt = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short' });
     const fmtWithYear = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
     el.weekLabel.textContent = `${fmt(state.weekStart)} – ${fmt(end)}`;
-    el.printHeader.textContent = `Film Plan — Week of ${fmtWithYear(state.weekStart)} – ${fmtWithYear(end)}`;
+    el.printHeader.innerHTML = `
+      <div class="doc-print-masthead week-print-masthead">
+        <div class="doc-print-masthead-text">
+          <h1>Week of ${fmtWithYear(state.weekStart)} – ${fmtWithYear(end)}</h1>
+        </div>
+        <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+      </div>`;
   }
 
   function updateWeekTally() {
@@ -1116,6 +1158,7 @@
       const missingCell = document.createElement('td');
       missingCell.className = 'needs-prep-missing';
       const missing = activeRequiredChecklistItems(booking).filter((item) => !booking['checklist_' + item.key]).map((item) => item.label);
+      if (booking.ra_unsigned) missing.push('Risk Assessment not signed off');
       missingCell.textContent = missing.join(', ');
 
       row.appendChild(dateCell);
@@ -1183,6 +1226,16 @@
     }
   }
 
+  function updateShootPrepFolderLink() {
+    const value = el.fieldShootPrepFolderUrl.value.trim();
+    if (value) {
+      el.fieldShootPrepFolderLink.href = value;
+      el.fieldShootPrepFolderLink.classList.remove('hidden');
+    } else {
+      el.fieldShootPrepFolderLink.classList.add('hidden');
+    }
+  }
+
   function updateChecklistUrlLink(item) {
     const input = el['fieldChecklist' + item.elKey + 'Url'];
     const link = el['fieldChecklist' + item.elKey + 'UrlLink'];
@@ -1208,16 +1261,29 @@
   }
 
   function openAllAttachedDocuments() {
-    const urls = CHECKLIST_ITEMS
-      .map((item) => el['fieldChecklist' + item.elKey + 'Url'].value.trim())
-      .filter(Boolean);
-    if (!urls.length) {
+    const docs = CHECKLIST_ITEMS
+      .map((item) => ({ label: item.label, url: el['fieldChecklist' + item.elKey + 'Url'].value.trim() }))
+      .filter((d) => d.url);
+    if (!docs.length) {
       alert('No documents attached to this booking yet.');
       return;
     }
-    for (const url of urls) {
-      window.open(url, '_blank', 'noopener');
+    if (docs.length === 1) {
+      window.open(docs[0].url, '_blank', 'noopener');
+      return;
     }
+    // Browsers only allow one window.open() per click to bypass the popup
+    // blocker — looping through several silently drops all but the first.
+    // List them instead so each open is its own genuine click.
+    const isHidden = el.openAllDocsList.classList.contains('hidden');
+    if (!isHidden) {
+      el.openAllDocsList.classList.add('hidden');
+      return;
+    }
+    el.openAllDocsList.innerHTML = docs.map((d) =>
+      `<a href="${d.url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">&#128279; ${csEscapeHtml(d.label)}</a>`
+    ).join('');
+    el.openAllDocsList.classList.remove('hidden');
   }
 
   let conflictCheckTimer = null;
@@ -1301,6 +1367,7 @@
     el.fieldKitSource.value = 'fuzzy_duck';
     updateLocationMapsLink();
     updateWhat3WordsLink();
+    updateShootPrepFolderLink();
     for (const item of CHECKLIST_ITEMS) {
       el['fieldChecklist' + item.elKey].checked = false;
       el['fieldChecklist' + item.elKey + 'Url'].value = '';
@@ -1310,6 +1377,7 @@
     el.fieldChecklistShotListNa.checked = false;
     updateShotListNaState();
     el.openAllDocsBtn.classList.add('hidden');
+    el.openAllDocsList.classList.add('hidden');
     el.fieldSkipCalendarSync.checked = false;
     el.deleteBookingBtn.classList.add('hidden');
     el.confirmBookingBtn.classList.add('hidden');
@@ -1336,10 +1404,12 @@
     el.fieldEnd.value = pad2(end.getHours()) + ':' + pad2(end.getMinutes());
     el.fieldLocation.value = booking.location || '';
     el.fieldWhat3Words.value = booking.what3words || '';
+    el.fieldShootPrepFolderUrl.value = booking.shoot_prep_folder_url || '';
     el.fieldClient.value = booking.client_id ? String(booking.client_id) : '';
     el.fieldKitSource.value = booking.kit_source || 'fuzzy_duck';
     updateLocationMapsLink();
     updateWhat3WordsLink();
+    updateShootPrepFolderLink();
     el.fieldNotes.value = booking.notes || '';
     for (const item of CHECKLIST_ITEMS) {
       const done = !!booking['checklist_' + item.key];
@@ -1352,6 +1422,7 @@
     updateShotListNaState();
     const anyDocUrl = CHECKLIST_ITEMS.some((item) => booking['checklist_' + item.key + '_url']);
     el.openAllDocsBtn.classList.toggle('hidden', !anyDocUrl);
+    el.openAllDocsList.classList.add('hidden');
     el.fieldSkipCalendarSync.checked = !!booking.skip_calendar_sync;
     const attendeeIds = new Set(booking.attendees.map((a) => a.id));
     for (const opt of el.fieldAttendees.options) {
@@ -1396,6 +1467,7 @@
       title: el.fieldTitle.value.trim(),
       location: el.fieldLocation.value.trim(),
       what3words: el.fieldWhat3Words.value.trim(),
+      shoot_prep_folder_url: el.fieldShootPrepFolderUrl.value.trim(),
       client_id: el.fieldClient.value ? Number(el.fieldClient.value) : null,
       kit_source: el.fieldKitSource.value,
       notes: el.fieldNotes.value.trim(),
@@ -1463,6 +1535,8 @@
 
   async function onEmailConfirmationClick() {
     if (!state.editingId) return;
+    state.emailPreviewKind = 'booking';
+    state.emailPreviewBookingId = state.editingId;
     el.emailConfirmationBtn.disabled = true;
     el.emailPreviewError.classList.add('hidden');
     try {
@@ -1483,24 +1557,52 @@
     }
   }
 
+  async function onEmailCallSheetClick() {
+    if (!state.callSheetBooking) return;
+    state.emailPreviewKind = 'call_sheet';
+    state.emailPreviewBookingId = state.callSheetBooking.id;
+    el.emailCallSheetBtn.disabled = true;
+    el.emailPreviewError.classList.add('hidden');
+    try {
+      const data = await apiGet(`api/call_sheet_email_preview.php?booking_id=${state.callSheetBooking.id}`);
+      if (!data.recipients.length) {
+        alert('No crew/client rows on this call sheet have an email address yet.');
+        return;
+      }
+      el.emailPreviewRecipients.textContent = 'To: ' + data.recipients.map((r) => `${r.name} <${r.email}>`).join(', ');
+      el.emailPreviewSubject.textContent = 'Subject: ' + data.subject;
+      el.emailPreviewFrame.srcdoc = data.html;
+      el.sendEmailPreviewBtn.disabled = false;
+      el.emailPreviewBackdrop.classList.remove('hidden');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      el.emailCallSheetBtn.disabled = false;
+    }
+  }
+
   function closeEmailPreview() {
     el.emailPreviewBackdrop.classList.add('hidden');
     el.emailPreviewFrame.srcdoc = '';
   }
 
   async function onSendEmailPreviewClick() {
-    if (!state.editingId) return;
+    if (!state.emailPreviewBookingId) return;
     el.sendEmailPreviewBtn.disabled = true;
     el.emailPreviewError.classList.add('hidden');
     try {
-      const data = await apiPost(`api/bookings_email_confirmation.php?id=${state.editingId}`);
+      const endpoint = state.emailPreviewKind === 'call_sheet'
+        ? `api/call_sheet_email_send.php?booking_id=${state.emailPreviewBookingId}`
+        : `api/bookings_email_confirmation.php?id=${state.emailPreviewBookingId}`;
+      const noun = state.emailPreviewKind === 'call_sheet' ? 'Call sheet' : 'Confirmation';
+      const data = await apiPost(endpoint);
       const failures = (data.email_results || []).filter((r) => r.status === 'error');
       closeEmailPreview();
       if (failures.length) {
-        alert('Some confirmation emails failed to send:\n' +
+        alert(`Some ${noun.toLowerCase()} emails failed to send:\n` +
           failures.map((r) => `${r.person}: ${r.error}`).join('\n'));
       } else {
-        alert(`Confirmation email sent to ${data.email_results.length} attendee${data.email_results.length === 1 ? '' : 's'}.`);
+        alert(`${noun} email sent to ${data.email_results.length} recipient${data.email_results.length === 1 ? '' : 's'}.`);
       }
     } catch (err) {
       el.emailPreviewError.textContent = err.message;
@@ -1565,17 +1667,38 @@
     el.callSheetError.classList.add('hidden');
     el.callSheetSavedNote.classList.add('hidden');
     el.csWeatherError.classList.add('hidden');
+    el.csHospitalError.classList.add('hidden');
+    el.csHospitalCandidates.classList.add('hidden');
+    el.csHospitalCandidates.innerHTML = '';
+    el.csUseHospitalBtn.classList.add('hidden');
     el.callSheetBackdrop.classList.remove('hidden');
+    el.csCopyFromNote.classList.add('hidden');
+    loadCallSheetCopyOptions(booking.id);
     try {
       const data = await apiGet(`api/call_sheet_get.php?booking_id=${booking.id}`);
+      state.callSheetBooking = data.booking;
+      el.callSheetTitle.textContent = data.booking.title;
+      el.csShootDateRow.classList.toggle('hidden', !state.standaloneDocType);
+      if (state.standaloneDocType) el.csShootDate.value = data.booking.start_datetime.slice(0, 10);
       el.csDayInfo.value = data.day_info || '';
       el.csLocationContactName.value = data.location_contact_name || '';
       el.csLocationContactPhone.value = data.location_contact_phone || '';
       el.csParkingNotes.value = data.parking_notes || '';
       el.csWeatherSummary.value = data.weather_summary || '';
       el.csWeatherIcons.value = data.weather_icons ? JSON.stringify(data.weather_icons) : '';
+      el.csWeatherLocation.value = data.weather_location || '';
+      el.csWeatherLocationOverride.value = data.weather_location_override || '';
+      el.csSunriseSunset.value = data.sunrise_sunset || '';
+      updateWeatherLocationNote();
       renderWeatherIconPreview(data.weather_icons, data.weather_summary);
       el.csNearestAe.value = data.nearest_ae || '';
+      el.csLocationMap.value = data.location_map || '';
+      if (data.location_map) {
+        el.csLocationMapPreview.src = data.location_map;
+        el.csLocationMapPreview.classList.remove('hidden');
+      } else {
+        el.csLocationMapPreview.classList.add('hidden');
+      }
 
       el.csProductionRows.innerHTML = '';
       for (const row of data.production_crew) buildCallSheetFieldRow(el.csProductionRows, CS_PERSON_FIELDS, row);
@@ -1591,7 +1714,53 @@
     }
   }
 
+  async function loadCallSheetCopyOptions(bookingId) {
+    el.csCopyFromSelect.innerHTML = '<option value="">— Select a shoot —</option>';
+    try {
+      const data = await apiGet(`api/call_sheets_list.php?exclude_booking_id=${bookingId}`);
+      for (const cs of data.call_sheets) {
+        const date = new Date(cs.start_datetime.replace(' ', 'T')).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+        const opt = document.createElement('option');
+        opt.value = cs.booking_id;
+        opt.textContent = `${cs.title} — ${date}`;
+        el.csCopyFromSelect.appendChild(opt);
+      }
+    } catch (err) {
+      // Leave the select at just its placeholder option.
+    }
+  }
+
+  async function onCopyFromCallSheetClick() {
+    const sourceBookingId = el.csCopyFromSelect.value;
+    if (!sourceBookingId) return;
+    el.callSheetError.classList.add('hidden');
+    el.csCopyFromBtn.disabled = true;
+    try {
+      const data = await apiGet(`api/call_sheet_get.php?booking_id=${sourceBookingId}`);
+      el.csParkingNotes.value = data.parking_notes || '';
+      el.csNearestAe.value = data.nearest_ae || '';
+      el.csProductionRows.innerHTML = '';
+      for (const row of data.production_crew) buildCallSheetFieldRow(el.csProductionRows, CS_PERSON_FIELDS, row);
+      el.csClientRows.innerHTML = '';
+      for (const row of data.client_contacts) buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, row);
+      el.csEquipmentRows.innerHTML = '';
+      for (const row of data.equipment) buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, row);
+      el.csScheduleRows.innerHTML = '';
+      for (const row of data.schedule) buildCallSheetFieldRow(el.csScheduleRows, CS_SCHEDULE_FIELDS, row);
+      el.csCopyFromNote.classList.remove('hidden');
+    } catch (err) {
+      el.callSheetError.textContent = err.message;
+      el.callSheetError.classList.remove('hidden');
+    } finally {
+      el.csCopyFromBtn.disabled = false;
+    }
+  }
+
   function closeCallSheet() {
+    if (state.standaloneDocType) {
+      location.href = `documents.html?type=${state.standaloneDocType}`;
+      return;
+    }
     el.callSheetBackdrop.classList.add('hidden');
     state.callSheetBooking = null;
   }
@@ -1609,12 +1778,19 @@
         parking_notes: el.csParkingNotes.value.trim(),
         weather_summary: el.csWeatherSummary.value.trim(),
         weather_icons: el.csWeatherIcons.value ? JSON.parse(el.csWeatherIcons.value) : null,
+        weather_location: el.csWeatherLocation.value.trim(),
+        weather_location_override: el.csWeatherLocationOverride.value.trim(),
+        sunrise_sunset: el.csSunriseSunset.value.trim(),
         nearest_ae: el.csNearestAe.value.trim(),
+        location_map: el.csLocationMap.value,
         production_crew: collectCallSheetRows(el.csProductionRows, ['name', 'title', 'contact', 'email', 'call_time']),
         client_contacts: collectCallSheetRows(el.csClientRows, ['name', 'title', 'contact', 'email', 'call_time']),
         equipment: collectCallSheetRows(el.csEquipmentRows, ['supplier', 'items']),
         schedule: collectCallSheetRows(el.csScheduleRows, ['time', 'description']),
       });
+      if (state.standaloneDocType && el.csShootDate.value) {
+        await apiPost(`api/standalone_doc_update.php?id=${state.callSheetBooking.id}`, { date: el.csShootDate.value });
+      }
       el.callSheetSavedNote.classList.remove('hidden');
     } catch (err) {
       el.callSheetError.textContent = err.message;
@@ -1624,32 +1800,234 @@
     }
   }
 
+  async function geocodeLocation(locationText, purposeLabel) {
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationText)}&countrycodes=gb&limit=1&format=json`);
+    let geoResults = await geoRes.json();
+    if (!geoResults.length) {
+      const postcodeMatch = locationText.match(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i);
+      if (postcodeMatch) {
+        const pcRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(postcodeMatch[0])}&countrycodes=gb&limit=1&format=json`);
+        geoResults = await pcRes.json();
+      }
+    }
+    if (!geoResults.length) {
+      throw new Error(`Couldn't find "${locationText}" for a ${purposeLabel} — check the spelling, or try adding just the postcode to the booking's location, or type it in manually.`);
+    }
+    return {
+      latitude: geoResults[0].lat,
+      longitude: geoResults[0].lon,
+      displayName: geoResults[0].display_name || '',
+    };
+  }
+
+  function haversineMiles(lat1, lon1, lat2, lon2) {
+    const R = 3958.8;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  async function findNearestHospital(locationText) {
+    const { latitude, longitude } = await geocodeLocation(locationText, 'hospital lookup');
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    // Many real hospitals with a full A&E (e.g. Stepping Hill) simply have no
+    // "emergency" tag at all in OSM — it's an opt-in tag mappers often skip,
+    // not a reliable "this hospital has no A&E" signal. Filtering it out
+    // entirely silently drops real, nearby A&Es. So: fetch all hospitals,
+    // only hard-exclude ones OSM explicitly says have no emergency care, and
+    // let the person choose from the nearest few with a confidence label.
+    const query = `[out:json][timeout:25];(node["amenity"="hospital"](around:60000,${lat},${lon});way["amenity"="hospital"](around:60000,${lat},${lon}););out center tags;`;
+    let res;
+    try {
+      res = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: query,
+      });
+    } catch (err) {
+      throw new Error('Could not reach the hospital lookup service — try again shortly, or add one manually.');
+    }
+    if (!res.ok) {
+      throw new Error(`Hospital lookup service returned an error (${res.status}) — try again shortly, or add one manually.`);
+    }
+    const data = await res.json();
+    // Names that are almost always GP surgeries/care homes/hospices
+    // mistakenly tagged amenity=hospital in OSM, not acute hospitals.
+    const nonHospitalNamePattern = /medical centre|surgery|practi[cs]e|care home|hospice|clinic/i;
+    const withDistance = (data.elements || [])
+      .filter((el) => el.tags && el.tags.name)
+      .filter((el) => el.tags.emergency !== 'no')
+      .filter((el) => !nonHospitalNamePattern.test(el.tags.name))
+      .map((el) => {
+        const elLat = el.lat ?? el.center?.lat;
+        const elLon = el.lon ?? el.center?.lon;
+        return { tags: el.tags, distanceMiles: haversineMiles(lat, lon, elLat, elLon) };
+      })
+      .sort((a, b) => a.distanceMiles - b.distanceMiles);
+    if (!withDistance.length) {
+      throw new Error('No hospitals found within 60km — try adding one manually.');
+    }
+    // Return the 3 nearest candidates rather than trusting a single automated
+    // answer — OSM data/tagging isn't always accurate or complete, so this
+    // needs a human to sanity-check against local knowledge before it goes
+    // on a document people would rely on in an emergency.
+    return withDistance.slice(0, 3).map((candidate) => {
+      const addressParts = [candidate.tags['addr:housenumber'], candidate.tags['addr:street'], candidate.tags['addr:city'], candidate.tags['addr:postcode']].filter(Boolean);
+      const address = addressParts.length ? `, ${addressParts.join(', ')}` : '';
+      const confidence = /^(yes|designated)$/.test(candidate.tags.emergency) ? 'confirmed A&E' : 'hospital — verify it has an A&E';
+      return { text: `${candidate.tags.name} (${confidence})${address} (${candidate.distanceMiles.toFixed(1)} miles)` };
+    });
+  }
+
+  function renderHospitalCandidates(listEl, candidates, namePrefix) {
+    listEl.innerHTML = candidates.map((c, i) => `
+      <label class="hospital-candidate">
+        <input type="radio" name="${namePrefix}" value="${i}" ${i === 0 ? 'checked' : ''}>
+        ${csEscapeHtml(c.text)}
+      </label>`).join('');
+    listEl.classList.remove('hidden');
+  }
+
+  async function onFindHospitalClick(booking, targetEl, btnEl, errorEl, listEl, useBtnEl, namePrefix) {
+    errorEl.classList.add('hidden');
+    listEl.classList.add('hidden');
+    listEl.innerHTML = '';
+    useBtnEl.classList.add('hidden');
+    if (!booking || !booking.location) {
+      errorEl.textContent = 'Add a location to the booking first.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    btnEl.disabled = true;
+    try {
+      const candidates = await findNearestHospital(booking.location);
+      listEl.dataset.candidates = JSON.stringify(candidates);
+      renderHospitalCandidates(listEl, candidates, namePrefix);
+      useBtnEl.classList.remove('hidden');
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnEl.disabled = false;
+    }
+  }
+
+  function onUseHospitalClick(targetEl, listEl) {
+    const checked = listEl.querySelector('input[type="radio"]:checked');
+    if (!checked) return;
+    const candidates = JSON.parse(listEl.dataset.candidates || '[]');
+    const chosen = candidates[Number(checked.value)];
+    if (!chosen) return;
+    const existing = targetEl.value.trim();
+    targetEl.value = existing ? `${existing}\n${chosen.text}` : chosen.text;
+    listEl.classList.add('hidden');
+    listEl.innerHTML = '';
+  }
+
+  function lonLatToWorldPx(lat, lon, zoom) {
+    const tileSize = 256;
+    const scale = 2 ** zoom * tileSize;
+    const x = ((lon + 180) / 360) * scale;
+    const latRad = (lat * Math.PI) / 180;
+    const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * scale;
+    return { x, y };
+  }
+
+  function loadTileImage(zoom, tx, ty) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`;
+    });
+  }
+
+  async function buildStaticMapDataUrl(lat, lon, widthPx = 480, heightPx = 280, zoom = 15) {
+    const tileSize = 256;
+    const center = lonLatToWorldPx(lat, lon, zoom);
+    const topLeftX = center.x - widthPx / 2;
+    const topLeftY = center.y - heightPx / 2;
+    const startTx = Math.floor(topLeftX / tileSize);
+    const startTy = Math.floor(topLeftY / tileSize);
+    const endTx = Math.floor((topLeftX + widthPx) / tileSize);
+    const endTy = Math.floor((topLeftY + heightPx) / tileSize);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = widthPx;
+    canvas.height = heightPx;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(0, 0, widthPx, heightPx);
+
+    for (let tx = startTx; tx <= endTx; tx++) {
+      for (let ty = startTy; ty <= endTy; ty++) {
+        const img = await loadTileImage(zoom, tx, ty);
+        if (img) ctx.drawImage(img, tx * tileSize - topLeftX, ty * tileSize - topLeftY);
+      }
+    }
+
+    const cx = widthPx / 2;
+    const cy = heightPx / 2;
+    ctx.fillStyle = '#d64550';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 9, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy - 4);
+    ctx.lineTo(cx + 6, cy - 4);
+    ctx.lineTo(cx, cy + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8a2530';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 9, 8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    return canvas.toDataURL('image/png');
+  }
+
+  async function onLoadMapClick() {
+    const booking = state.callSheetBooking;
+    el.csMapError.classList.add('hidden');
+    const lookupLocation = el.csWeatherLocationOverride.value.trim() || (booking && booking.location);
+    if (!lookupLocation) {
+      el.csMapError.textContent = 'Add a location to the booking first, or type a weather override above.';
+      el.csMapError.classList.remove('hidden');
+      return;
+    }
+    el.csLoadMapBtn.disabled = true;
+    try {
+      const { latitude, longitude } = await geocodeLocation(lookupLocation, 'map lookup');
+      const dataUrl = await buildStaticMapDataUrl(parseFloat(latitude), parseFloat(longitude));
+      el.csLocationMap.value = dataUrl;
+      el.csLocationMapPreview.src = dataUrl;
+      el.csLocationMapPreview.classList.remove('hidden');
+    } catch (err) {
+      el.csMapError.textContent = err.message;
+      el.csMapError.classList.remove('hidden');
+    } finally {
+      el.csLoadMapBtn.disabled = false;
+    }
+  }
+
   async function fetchLiveWeather() {
     const booking = state.callSheetBooking;
     el.csWeatherError.classList.add('hidden');
-    if (!booking || !booking.location) {
-      el.csWeatherError.textContent = 'Add a location to the booking first.';
+    const lookupLocation = el.csWeatherLocationOverride.value.trim() || (booking && booking.location);
+    if (!lookupLocation) {
+      el.csWeatherError.textContent = 'Add a location to the booking first, or type an override above.';
       el.csWeatherError.classList.remove('hidden');
       return;
     }
     el.csFetchWeatherBtn.disabled = true;
     try {
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(booking.location)}&countrycodes=gb&limit=1&format=json`);
-      let geoResults = await geoRes.json();
-      if (!geoResults.length) {
-        const postcodeMatch = booking.location.match(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i);
-        if (postcodeMatch) {
-          const pcRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(postcodeMatch[0])}&countrycodes=gb&limit=1&format=json`);
-          geoResults = await pcRes.json();
-        }
-      }
-      if (!geoResults.length) {
-        throw new Error(`Couldn't find "${booking.location}" for a weather lookup — check the spelling, or try adding just the postcode to the booking's location, or type the forecast in manually.`);
-      }
-      const latitude = geoResults[0].lat;
-      const longitude = geoResults[0].lon;
+      const { latitude, longitude, displayName: resolvedLocation } = await geocodeLocation(lookupLocation, 'weather lookup');
       const dateIso = booking.start_datetime.slice(0, 10);
-      const forecastRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,precipitation_probability,windspeed_10m,weathercode&timezone=Europe%2FLondon&start_date=${dateIso}&end_date=${dateIso}`);
+      const forecastRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,precipitation_probability,windspeed_10m,weathercode&daily=sunrise,sunset&timezone=Europe%2FLondon&start_date=${dateIso}&end_date=${dateIso}`);
       const forecastData = await forecastRes.json();
       if (!forecastData.hourly) {
         if (forecastData.error && /out of allowed range/i.test(forecastData.reason || '')) {
@@ -1684,7 +2062,14 @@
       if (!lines.length) throw new Error('No forecast data available for that time range.');
       el.csWeatherSummary.value = lines.join('\n');
       el.csWeatherIcons.value = JSON.stringify(icons);
+      el.csWeatherLocation.value = resolvedLocation;
+      updateWeatherLocationNote();
       renderWeatherIconPreview(icons, lines.join('\n'));
+
+      if (forecastData.daily && forecastData.daily.sunrise && forecastData.daily.sunset) {
+        const fmtTime = (iso) => iso.slice(11, 16);
+        el.csSunriseSunset.value = `Sunrise ${fmtTime(forecastData.daily.sunrise[0])} · Sunset ${fmtTime(forecastData.daily.sunset[0])}`;
+      }
     } catch (err) {
       el.csWeatherError.textContent = err.message;
       el.csWeatherError.classList.remove('hidden');
@@ -1708,6 +2093,23 @@
     return WEATHER_ICONS[code] || '🌡️';
   }
 
+  function parseWeatherLine(line) {
+    const m = /^(\S+):\s*(-?\d+)°C,\s*(\d+)% chance of rain,\s*(-?\d+)mph wind$/.exec((line || '').trim());
+    if (!m) return null;
+    return { time: m[1], temp: m[2], rain: m[3], wind: m[4] };
+  }
+
+  function updateWeatherLocationNote() {
+    const location = el.csWeatherLocation.value;
+    if (location) {
+      el.csWeatherLocationNote.textContent = `Forecast for: ${location}`;
+      el.csWeatherLocationNote.classList.remove('hidden');
+    } else {
+      el.csWeatherLocationNote.textContent = '';
+      el.csWeatherLocationNote.classList.add('hidden');
+    }
+  }
+
   function renderWeatherIconPreview(icons, weatherText) {
     if (!icons || !icons.length) {
       el.csWeatherIconPreview.classList.add('hidden');
@@ -1716,8 +2118,14 @@
     }
     const lines = (weatherText || '').split('\n').filter(Boolean);
     el.csWeatherIconPreview.innerHTML = icons.map((code, i) => {
-      const time = (lines[i] || '').split(':')[0] || '';
-      return `<span class="cs-weather-chip"><span class="cs-weather-chip-icon">${weatherIconForCode(code)}</span><span class="cs-weather-chip-time">${csEscapeHtml(time)}</span></span>`;
+      const parsed = parseWeatherLine(lines[i]);
+      const time = parsed ? parsed.time : (lines[i] || '').split(':')[0] || '';
+      const temp = parsed ? `${parsed.temp}°C` : '';
+      return `<span class="cs-weather-chip">
+        <span class="cs-weather-chip-time">${csEscapeHtml(time)}</span>
+        <span class="cs-weather-chip-icon">${weatherIconForCode(code)}</span>
+        ${temp ? `<span class="cs-weather-chip-temp">${csEscapeHtml(temp)}</span>` : ''}
+      </span>`;
     }).join('');
     el.csWeatherIconPreview.classList.remove('hidden');
   }
@@ -1729,14 +2137,32 @@
   function renderWeatherPrintBody() {
     const lines = el.csWeatherSummary.value.split('\n').filter(Boolean);
     const icons = el.csWeatherIcons.value ? JSON.parse(el.csWeatherIcons.value) : null;
+    const sunTimes = el.csSunriseSunset.value
+      ? `<p class="cs-print-weather-suntimes">${csEscapeHtml(el.csSunriseSunset.value)}</p>`
+      : '';
+    const locationCaption = el.csWeatherLocation.value
+      ? `<p class="cs-print-weather-location">Forecast for: ${csEscapeHtml(el.csWeatherLocation.value)}</p>`
+      : '';
     if (icons && icons.length === lines.length) {
-      return `<div class="cs-print-weather-row">${lines.map((line, i) => `
+      return `<div class="cs-print-weather-row">${lines.map((line, i) => {
+        const parsed = parseWeatherLine(line);
+        if (parsed) {
+          return `
+        <div class="cs-print-weather-cell">
+          <div class="cs-print-weather-time">${csEscapeHtml(parsed.time)}</div>
+          <div class="cs-print-weather-icon">${weatherIconForCode(icons[i])}</div>
+          <div class="cs-print-weather-temp">${csEscapeHtml(parsed.temp)}&deg;C</div>
+          <div class="cs-print-weather-detail">${csEscapeHtml(parsed.rain)}% rain &middot; ${csEscapeHtml(parsed.wind)}mph</div>
+        </div>`;
+        }
+        return `
         <div class="cs-print-weather-cell">
           <div class="cs-print-weather-icon">${weatherIconForCode(icons[i])}</div>
           <div class="cs-print-weather-text">${csEscapeHtml(line)}</div>
-        </div>`).join('')}</div>`;
+        </div>`;
+      }).join('')}</div>${sunTimes}${locationCaption}`;
     }
-    return `<p>${csEscapeHtml(el.csWeatherSummary.value).replace(/\n/g, '<br>')}</p>`;
+    return `<p>${csEscapeHtml(el.csWeatherSummary.value).replace(/\n/g, '<br>')}</p>${sunTimes}${locationCaption}`;
   }
 
   function renderCallSheetPrintHtml() {
@@ -1780,6 +2206,7 @@
           ${booking.what3words ? `<p><strong>what3words:</strong> ${csEscapeHtml(booking.what3words)} &mdash; <a href="https://what3words.com/${csEscapeHtml(w3wSlug)}">open</a></p>` : ''}
           ${el.csLocationContactName.value ? `<p><strong>Contact on arrival:</strong> ${csEscapeHtml(el.csLocationContactName.value)}${el.csLocationContactPhone.value ? ' — ' + csEscapeHtml(el.csLocationContactPhone.value) : ''}</p>` : ''}
           ${el.csParkingNotes.value ? `<p><strong>Parking:</strong> ${csEscapeHtml(el.csParkingNotes.value).replace(/\n/g, '<br>')}</p>` : ''}
+          ${el.csLocationMap.value ? `<img class="cs-print-map" src="${el.csLocationMap.value}" alt="Map of the shoot location">` : ''}
         </div>
       </div>
 
@@ -1789,19 +2216,19 @@
         <div class="cs-print-box-body">${renderWeatherPrintBody()}</div>
       </div>` : ''}
 
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">PRODUCTION</div>
         <div class="cs-print-box-body">${personTable(production)}</div>
       </div>
 
       ${clients.length ? `
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">CLIENT</div>
         <div class="cs-print-box-body">${personTable(clients)}</div>
       </div>` : ''}
 
       ${equipment.length ? `
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">SUPPLIER &amp; EQUIPMENT</div>
         <div class="cs-print-box-body">
           <table class="cs-print-table"><thead><tr><th style="width:30%">Supplier</th><th>Equipment</th></tr></thead>
@@ -1810,7 +2237,7 @@
       </div>` : ''}
 
       ${schedule.length ? `
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">SCHEDULE</div>
         <div class="cs-print-box-body">
           <table class="cs-print-table"><thead><tr><th style="width:25%">Time</th><th>Activity</th></tr></thead>
@@ -1966,9 +2393,11 @@
 
     return `
       <div class="doc-print-masthead">
+        <div class="doc-print-masthead-text">
+          <h1>SHOT LIST</h1>
+          <p class="cs-day">${booking.client_name ? csEscapeHtml(booking.client_name) + ' — ' : ''}${csEscapeHtml(el.slSubtitle.value || booking.title)} — ${dateLabel}</p>
+        </div>
         <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
-        <h1>SHOT LIST</h1>
-        <p class="cs-day">${booking.client_name ? csEscapeHtml(booking.client_name) + ' — ' : ''}${csEscapeHtml(el.slSubtitle.value || booking.title)} — ${dateLabel}</p>
       </div>
       ${sectionsHtml}
     `;
@@ -2052,9 +2481,19 @@
     el.riskAssessmentTitle.textContent = booking.title;
     el.riskAssessmentError.classList.add('hidden');
     el.riskAssessmentSavedNote.classList.add('hidden');
+    el.raHospitalError.classList.add('hidden');
+    el.raHospitalCandidates.classList.add('hidden');
+    el.raHospitalCandidates.innerHTML = '';
+    el.raUseHospitalBtn.classList.add('hidden');
     el.riskAssessmentBackdrop.classList.remove('hidden');
+    el.raTemplateNote.classList.add('hidden');
+    loadRaTemplateOptions();
     try {
       const data = await apiGet(`api/risk_assessment_get.php?booking_id=${booking.id}`);
+      state.riskAssessmentBooking = data.booking;
+      el.riskAssessmentTitle.textContent = data.booking.title;
+      el.raShootDateRow.classList.toggle('hidden', !state.standaloneDocType);
+      if (state.standaloneDocType) el.raShootDate.value = data.booking.start_datetime.slice(0, 10);
       el.raClientName.value = data.client_name || '';
       el.raLocationContact.value = data.location_contact || '';
       el.raDirectorName.value = data.director_name || '';
@@ -2081,7 +2520,83 @@
     }
   }
 
+  async function loadRaTemplateOptions() {
+    el.raTemplateSelect.innerHTML = '<option value="">— Select a template —</option>';
+    try {
+      const data = await apiGet('api/ra_templates_list.php');
+      for (const t of data.templates) {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        el.raTemplateSelect.appendChild(opt);
+      }
+    } catch (err) {
+      // Leave the select at just its placeholder option.
+    }
+  }
+
+  async function onLoadRaTemplateClick() {
+    const templateId = el.raTemplateSelect.value;
+    if (!templateId) return;
+    el.riskAssessmentError.classList.add('hidden');
+    el.raTemplateNote.classList.add('hidden');
+    el.raLoadTemplateBtn.disabled = true;
+    try {
+      const data = await apiGet(`api/ra_template_get.php?id=${templateId}`);
+      renderStandardArrangementsRows(data.standard_arrangements);
+      el.raHazardRows.innerHTML = '';
+      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, row);
+      el.raTemplateNote.textContent = `Loaded "${data.name}" — review before saving.`;
+      el.raTemplateNote.classList.remove('hidden');
+    } catch (err) {
+      el.riskAssessmentError.textContent = err.message;
+      el.riskAssessmentError.classList.remove('hidden');
+    } finally {
+      el.raLoadTemplateBtn.disabled = false;
+    }
+  }
+
+  async function onSaveRaTemplateClick() {
+    const name = prompt('Name this template (e.g. "Drone shoot", "Studio shoot"):');
+    if (!name || !name.trim()) return;
+    el.riskAssessmentError.classList.add('hidden');
+    el.raSaveTemplateBtn.disabled = true;
+    try {
+      await apiPost('api/ra_template_create.php', {
+        name: name.trim(),
+        standard_arrangements: collectStandardArrangements(),
+        hazards: collectCallSheetRows(el.raHazardRows, ['hazard', 'to_whom', 'precautions', 'level']),
+      });
+      await loadRaTemplateOptions();
+      el.raTemplateNote.textContent = `Saved as "${name.trim()}".`;
+      el.raTemplateNote.classList.remove('hidden');
+    } catch (err) {
+      el.riskAssessmentError.textContent = err.message;
+      el.riskAssessmentError.classList.remove('hidden');
+    } finally {
+      el.raSaveTemplateBtn.disabled = false;
+    }
+  }
+
+  async function onDeleteRaTemplateClick() {
+    const templateId = el.raTemplateSelect.value;
+    if (!templateId) return;
+    const label = el.raTemplateSelect.options[el.raTemplateSelect.selectedIndex].textContent;
+    if (!confirm(`Delete the "${label}" template? This can't be undone.`)) return;
+    try {
+      await apiPost(`api/ra_template_delete.php?id=${templateId}`);
+      await loadRaTemplateOptions();
+    } catch (err) {
+      el.riskAssessmentError.textContent = err.message;
+      el.riskAssessmentError.classList.remove('hidden');
+    }
+  }
+
   function closeRiskAssessment() {
+    if (state.standaloneDocType) {
+      location.href = `documents.html?type=${state.standaloneDocType}`;
+      return;
+    }
     el.riskAssessmentBackdrop.classList.add('hidden');
     state.riskAssessmentBooking = null;
   }
@@ -2111,6 +2626,9 @@
         signoff_producer_name: el.raSignoffProducerName.value.trim(),
         signoff_producer_date: el.raSignoffProducerDate.value,
       });
+      if (state.standaloneDocType && el.raShootDate.value) {
+        await apiPost(`api/standalone_doc_update.php?id=${state.riskAssessmentBooking.id}`, { date: el.raShootDate.value });
+      }
       el.riskAssessmentSavedNote.classList.remove('hidden');
     } catch (err) {
       el.riskAssessmentError.textContent = err.message;
@@ -2184,9 +2702,11 @@
 
     return `
       <div class="doc-print-masthead">
+        <div class="doc-print-masthead-text">
+          <h1>PRODUCTION RISK ASSESSMENT</h1>
+          <p class="cs-day">${csEscapeHtml(booking.title)} — ${dateLabel}</p>
+        </div>
         <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
-        <h1>PRODUCTION RISK ASSESSMENT</h1>
-        <p class="cs-day">${csEscapeHtml(booking.title)} — ${dateLabel}</p>
       </div>
 
       <table class="cs-print-table ra-print-header-table">
@@ -2209,12 +2729,12 @@
         <div class="cs-print-box-body"><p>${csEscapeHtml(el.raCrewExperts.value).replace(/\n/g, '<br>')}</p></div>
       </div>
 
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">FIRE, FIRST AID, EMERGENCY &amp; WELFARE ARRANGEMENTS</div>
         <div class="cs-print-box-body">${standardTable}</div>
       </div>
 
-      <div class="cs-print-box">
+      <div class="cs-print-box cs-print-box-breakable">
         <div class="cs-print-box-title">HAZARDS IDENTIFIED / RISKS ARISING</div>
         <div class="cs-print-box-body">${hazardsTable}</div>
       </div>
@@ -2605,6 +3125,20 @@
     const emailCell = document.createElement('td');
     emailCell.textContent = person.email;
 
+    const shooterCell = document.createElement('td');
+    const shooterCheckbox = document.createElement('input');
+    shooterCheckbox.type = 'checkbox';
+    shooterCheckbox.checked = !!person.is_main_shooter;
+    shooterCheckbox.addEventListener('change', async () => {
+      try {
+        await apiPost(`api/people_update.php?id=${person.id}`, { is_main_shooter: shooterCheckbox.checked });
+      } catch (err) {
+        alert(err.message);
+        shooterCheckbox.checked = !shooterCheckbox.checked;
+      }
+    });
+    shooterCell.appendChild(shooterCheckbox);
+
     const statusCell = document.createElement('td');
     const pill = document.createElement('span');
     pill.className = `status-pill ${person.active ? 'active' : 'inactive'}`;
@@ -2648,6 +3182,7 @@
     row.appendChild(nameCell);
     row.appendChild(roleCell);
     row.appendChild(emailCell);
+    row.appendChild(shooterCell);
     row.appendChild(statusCell);
     row.appendChild(actionsCell);
     return row;
@@ -2674,6 +3209,12 @@
     emailInput.value = person.email;
     emailCell.appendChild(emailInput);
 
+    const shooterCell = document.createElement('td');
+    const shooterInput = document.createElement('input');
+    shooterInput.type = 'checkbox';
+    shooterInput.checked = !!person.is_main_shooter;
+    shooterCell.appendChild(shooterInput);
+
     const statusCell = document.createElement('td');
     const pill = document.createElement('span');
     pill.className = `status-pill ${person.active ? 'active' : 'inactive'}`;
@@ -2693,6 +3234,7 @@
           name: nameInput.value.trim(),
           role: roleInput.value.trim(),
           email: emailInput.value.trim(),
+          is_main_shooter: shooterInput.checked,
         });
         await loadPeopleTable();
         await loadPeople();
@@ -2713,6 +3255,7 @@
     row.appendChild(nameCell);
     row.appendChild(roleCell);
     row.appendChild(emailCell);
+    row.appendChild(shooterCell);
     row.appendChild(statusCell);
     row.appendChild(actionsCell);
   }
@@ -2725,6 +3268,7 @@
         name: el.personName.value.trim(),
         role: el.personRole.value.trim(),
         email: el.personEmail.value.trim(),
+        is_main_shooter: el.personIsMainShooter.checked,
       });
       el.personForm.reset();
       await loadPeopleTable();
@@ -2910,6 +3454,7 @@
   el.clientForm.addEventListener('submit', onClientFormSubmit);
   el.fieldLocation.addEventListener('input', updateLocationMapsLink);
   el.fieldWhat3Words.addEventListener('input', updateWhat3WordsLink);
+  el.fieldShootPrepFolderUrl.addEventListener('input', updateShootPrepFolderLink);
   el.fieldDate.addEventListener('input', scheduleConflictCheck);
   el.fieldStart.addEventListener('input', scheduleConflictCheck);
   el.fieldEnd.addEventListener('input', scheduleConflictCheck);
@@ -2933,6 +3478,7 @@
   el.confirmBookingBtn.addEventListener('click', onConfirmClick);
   el.unconfirmBookingBtn.addEventListener('click', onUnconfirmClick);
   el.emailConfirmationBtn.addEventListener('click', onEmailConfirmationClick);
+  el.emailCallSheetBtn.addEventListener('click', onEmailCallSheetClick);
   el.cancelEmailPreviewBtn.addEventListener('click', closeEmailPreview);
   el.sendEmailPreviewBtn.addEventListener('click', onSendEmailPreviewClick);
   el.emailPreviewBackdrop.addEventListener('click', (e) => { if (e.target === el.emailPreviewBackdrop) closeEmailPreview(); });
@@ -2941,11 +3487,19 @@
   el.saveCallSheetBtn.addEventListener('click', saveCallSheet);
   el.printCallSheetBtn.addEventListener('click', onPrintCallSheetClick);
   el.csFetchWeatherBtn.addEventListener('click', fetchLiveWeather);
+  el.csFindHospitalBtn.addEventListener('click', () => onFindHospitalClick(state.callSheetBooking, el.csNearestAe, el.csFindHospitalBtn, el.csHospitalError, el.csHospitalCandidates, el.csUseHospitalBtn, 'csHospitalChoice'));
+  el.csUseHospitalBtn.addEventListener('click', () => onUseHospitalClick(el.csNearestAe, el.csHospitalCandidates));
+  el.csLoadMapBtn.addEventListener('click', onLoadMapClick);
+  el.raFindHospitalBtn.addEventListener('click', () => onFindHospitalClick(state.riskAssessmentBooking, el.raNearestAe, el.raFindHospitalBtn, el.raHospitalError, el.raHospitalCandidates, el.raUseHospitalBtn, 'raHospitalChoice'));
+  el.raUseHospitalBtn.addEventListener('click', () => onUseHospitalClick(el.raNearestAe, el.raHospitalCandidates));
   el.csWeatherSummary.addEventListener('input', () => {
     el.csWeatherIcons.value = '';
+    el.csWeatherLocation.value = '';
+    updateWeatherLocationNote();
     renderWeatherIconPreview(null, '');
   });
   el.callSheetBackdrop.addEventListener('click', (e) => { if (e.target === el.callSheetBackdrop) closeCallSheet(); });
+  el.csCopyFromBtn.addEventListener('click', onCopyFromCallSheetClick);
   el.csAddProductionRow.addEventListener('click', () => buildCallSheetFieldRow(el.csProductionRows, CS_PERSON_FIELDS, {}));
   el.csAddClientRow.addEventListener('click', () => buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, {}));
   el.csAddEquipmentRow.addEventListener('click', () => buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, {}));
@@ -2963,6 +3517,9 @@
   el.printRiskAssessmentBtn.addEventListener('click', onPrintRiskAssessmentClick);
   el.riskAssessmentBackdrop.addEventListener('click', (e) => { if (e.target === el.riskAssessmentBackdrop) closeRiskAssessment(); });
   el.raAddHazardRow.addEventListener('click', () => buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, {}));
+  el.raLoadTemplateBtn.addEventListener('click', onLoadRaTemplateClick);
+  el.raSaveTemplateBtn.addEventListener('click', onSaveRaTemplateClick);
+  el.raDeleteTemplateBtn.addEventListener('click', onDeleteRaTemplateClick);
 
   function waitForGoogleIdentity(cb) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -2993,10 +3550,30 @@
     }
   }
 
+  async function enterStandaloneMode(id, type) {
+    state.standaloneDocType = type;
+    document.body.classList.add('standalone-mode');
+    const placeholder = { id, title: 'Loading…', start_datetime: '', end_datetime: '' };
+    if (type === 'call_sheet') {
+      await openCallSheet(placeholder);
+    } else {
+      await openRiskAssessment(placeholder);
+    }
+  }
+
   async function showApp(user) {
     el.authGate.classList.add('hidden');
     el.appRoot.classList.remove('hidden');
     el.currentUserLabel.textContent = user.name || user.email;
+
+    const params = new URLSearchParams(location.search);
+    const standaloneId = Number(params.get('standalone_doc'));
+    const standaloneType = params.get('type');
+    if (standaloneId && (standaloneType === 'call_sheet' || standaloneType === 'risk_assessment')) {
+      await enterStandaloneMode(standaloneId, standaloneType);
+      return;
+    }
+
     await loadPeople();
     await loadPersonColors();
     await loadClients();

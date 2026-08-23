@@ -196,6 +196,14 @@ button.confirm:hover { filter: brightness(1.08); }
 
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+#downloadWeekBtn {
+  background: #ffd300;
+  border-color: #e6bd00;
+  color: #111;
+  font-weight: 600;
+}
+#downloadWeekBtn:hover { filter: brightness(1.05); }
+
 .legend {
   display: flex;
   gap: 0.75rem;
@@ -814,6 +822,42 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .checklist-row .secondary-link-btn { padding-left: 1.65rem; margin-top: -0.1rem; }
 
+.open-docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt, #f7f7f7);
+}
+.open-docs-list a {
+  font-size: 0.82rem;
+  color: var(--confirmed-border);
+  text-decoration: none;
+}
+.open-docs-list a:hover { text-decoration: underline; }
+
+.hospital-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.3rem 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt, #f7f7f7);
+}
+.hospital-candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.hospital-candidate input[type="radio"] { margin-top: 0.2rem; flex-shrink: 0; }
+
 .field-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
@@ -1211,6 +1255,16 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .muted-note { color: var(--muted); font-size: 0.9rem; }
 
+.field-hint { margin: -0.35rem 0 0.5rem; font-size: 0.78rem; color: var(--muted); }
+
+.cs-location-map-preview {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-top: 0.4rem;
+}
+.cs-print-map { max-width: 100%; border-radius: 4px; margin-top: 0.5rem; display: block; }
+
 .needs-prep-missing { color: var(--pencil-text); font-size: 0.85rem; }
 
 .prep-status-pill {
@@ -1253,13 +1307,18 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .hidden { display: none !important; }
 
+body.standalone-mode .topbar,
+body.standalone-mode main {
+  display: none !important;
+}
+
 .print-only { display: none; }
 .callsheet-print-only { display: none; }
 
 @media print {
   @page {
     size: landscape;
-    margin: 10mm;
+    margin: 6mm;
   }
 
   body { background: #fff; }
@@ -1298,9 +1357,22 @@ main { padding: 1rem 1.5rem 3rem; }
 
   .print-only {
     display: block;
-    font-size: 1.1rem;
-    font-weight: 700;
     margin-bottom: 0.5rem;
+  }
+
+  .week-print-masthead {
+    padding: 0.25rem 0.8rem;
+    margin: 0 0 0.25rem;
+  }
+  .week-print-masthead .doc-print-masthead-logo { height: 57px; }
+  .week-print-masthead h1 { font-size: 1.05rem; }
+
+  .day-header { padding: 0.25rem; }
+
+  /* Trim the grid to 7am-6pm for print so a normal week fits on one page. */
+  .time-gutter, .day-column {
+    max-height: 660px !important;
+    overflow: hidden !important;
   }
 
   .week-body { display: block; }
@@ -1454,6 +1526,12 @@ main { padding: 1rem 1.5rem 3rem; }
   page-break-inside: avoid;
 }
 
+/* Boxes whose table/list can run long (many crew rows, many hazards) are
+   allowed to break across a page rather than force-jumping the whole box
+   onto the next page and leaving a large gap behind it. */
+.cs-print-box-breakable { page-break-inside: auto; }
+.cs-print-box-breakable .cs-print-table tr { page-break-inside: avoid; }
+
 .cs-print-box-title {
   background: #f5cf82;
   font-weight: 700;
@@ -1469,36 +1547,61 @@ main { padding: 1rem 1.5rem 3rem; }
 .cs-print-weather-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 .cs-print-weather-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.15rem;
-  flex: 1 1 auto;
+  gap: 0.1rem;
+  flex: 1 1 0;
+  background: #eaf4fb;
+  border: 1px solid #b9d7ea;
+  border-radius: 6px;
+  padding: 0.5rem 0.4rem;
 }
-.cs-print-weather-icon { font-size: 2.1rem; line-height: 1; }
+.cs-print-weather-time {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0a5a8a;
+}
+.cs-print-weather-icon { font-size: 1.9rem; line-height: 1; margin: 0.15rem 0; }
+.cs-print-weather-temp { font-size: 1.15rem; font-weight: 700; color: #12202b; }
+.cs-print-weather-detail { font-size: 0.66rem; color: #4a5a66; }
+.cs-print-weather-location { font-size: 0.68rem; color: #666; font-style: italic; margin: 0.4rem 0 0; }
+.cs-print-weather-suntimes { font-size: 0.75rem; font-weight: 600; color: #333; margin: 0.5rem 0 0; }
 .cs-print-weather-text { font-size: 0.78rem; line-height: 1.3; }
 
 .cs-weather-icon-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin: 0.4rem 0;
 }
 .cs-weather-chip {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  background: var(--surface-alt, #f2f2f2);
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.8rem;
+  gap: 0.1rem;
+  background: #eaf4fb;
+  border: 1px solid #b9d7ea;
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+  min-width: 52px;
 }
-.cs-weather-chip-icon { font-size: 1.1rem; line-height: 1; }
-.cs-weather-chip-time { font-weight: 600; }
+.cs-weather-chip-time {
+  font-weight: 700;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #0a5a8a;
+}
+.cs-weather-chip-icon { font-size: 1.3rem; line-height: 1; }
+.cs-weather-chip-temp { font-weight: 700; font-size: 0.85rem; }
 
 .cs-print-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .cs-print-table th, .cs-print-table td {
@@ -1516,16 +1619,21 @@ main { padding: 1rem 1.5rem 3rem; }
   margin-top: 1rem;
 }
 
-/* Shared print masthead (Risk Assessment, Shot List) */
+/* Shared print masthead (Risk Assessment, Shot List, Week download) */
 .doc-print-masthead {
   background: #ffd300;
-  text-align: center;
-  padding: 0.9rem 1rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+  padding: 0.7rem 1.2rem;
   margin: 0 0 0.9rem;
   border-radius: 4px;
 }
-.doc-print-masthead-logo { height: 42px; display: block; margin: 0 auto 0.4rem; }
-.doc-print-masthead h1 { font-size: 1.2rem; margin: 0 0 2px; letter-spacing: 0.02em; }
+.doc-print-masthead-text { display: flex; flex-direction: column; gap: 2px; }
+.doc-print-masthead-logo { height: 84px; display: block; flex-shrink: 0; }
+.doc-print-masthead h1 { font-size: 1.25rem; margin: 0; letter-spacing: 0.02em; }
 .doc-print-masthead .cs-day { font-size: 0.9rem; color: #333; margin: 0; }
 
 /* Risk assessment print output */

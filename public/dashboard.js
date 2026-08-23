@@ -14,6 +14,33 @@
   const UNAVAILABLE_PERIOD_LABELS = { all_day: '', am: ' (AM)', pm: ' (PM)' };
   const UPCOMING_DAYS_AHEAD = 14;
 
+  // Same palette + assignment order as the calendar's colorForPerson(), so a
+  // person's color matches between the dashboard and the week view.
+  const AVATAR_COLORS = [
+    '#e07a5f', '#3d5a80', '#81b29a', '#c08a2e', '#9b5de5', '#00a896', '#d64550', '#4a6fa5',
+    '#2a9d8f', '#e76f51', '#6d597a', '#457b9d', '#b56576', '#588157', '#bc6c25', '#7209b7',
+  ];
+  const personColorById = {};
+
+  function initialsForName(name) {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  async function loadPersonColors() {
+    try {
+      const all = await apiGet('api/people_list.php?include_inactive=1');
+      const sorted = all.slice().sort((a, b) => a.id - b.id);
+      sorted.forEach((p, i) => {
+        personColorById[p.id] = AVATAR_COLORS[i % AVATAR_COLORS.length];
+      });
+    } catch (err) {
+      // Fall through with no colors assigned — dots just won't render.
+    }
+  }
+
   const el = {
     authGate: document.getElementById('authGate'),
     appRoot: document.getElementById('appRoot'),
@@ -93,7 +120,14 @@
       row.className = 'dash-panel-item';
       const title = document.createElement('span');
       title.className = 'dash-panel-item-title';
-      title.textContent = item.title;
+      if (item.personId != null && personColorById[item.personId]) {
+        const avatar = document.createElement('span');
+        avatar.className = 'dash-panel-avatar';
+        avatar.style.backgroundColor = personColorById[item.personId];
+        avatar.textContent = initialsForName(item.personName);
+        title.appendChild(avatar);
+      }
+      title.appendChild(document.createTextNode(item.title));
       const meta = document.createElement('span');
       meta.className = 'dash-panel-item-meta';
       meta.textContent = item.meta;
@@ -157,6 +191,8 @@
           title: `${u.person_name} unavailable${period}`,
           meta: `${formatDateShort(d)}${u.reason ? ' — ' + u.reason : ''}`,
           sortKey: u.day + ' 1',
+          personId: u.person_id,
+          personName: u.person_name,
         });
       }
       if (recurring.length) {
@@ -169,6 +205,8 @@
               title: `${r.person_name} unavailable${period}`,
               meta: `${formatDateShort(d)}${r.reason ? ' — ' + r.reason : ''} (recurring)`,
               sortKey: dayIso + ' 1',
+              personId: r.person_id,
+              personName: r.person_name,
             });
           }
         }
@@ -182,6 +220,7 @@
   }
 
   async function loadDashboardStats() {
+    await loadPersonColors();
     let weekBookings = [];
     try {
       const week = await apiGet('api/bookings_list.php');

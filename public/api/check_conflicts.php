@@ -24,6 +24,7 @@ $sql = "SELECT b.id, b.title, b.start_datetime, b.end_datetime, p.id AS person_i
         JOIN booking_people bp ON bp.booking_id = b.id
         JOIN people p ON p.id = bp.person_id
         WHERE b.status != 'cancelled'
+        AND b.is_standalone_doc = 0
           AND bp.person_id IN ($placeholders)
           AND b.start_datetime < ?
           AND b.end_datetime > ?";

@@ -26,7 +26,7 @@ $raStmt = $pdo->prepare('SELECT * FROM risk_assessments WHERE booking_id = ?');
 $raStmt->execute([$bookingId]);
 $ra = $raStmt->fetch();
 
-$callSheetStmt = $pdo->prepare('SELECT location_contact_name, location_contact_phone, nearest_ae FROM call_sheets WHERE booking_id = ?');
+$callSheetStmt = $pdo->prepare('SELECT location_contact_name, location_contact_phone, nearest_ae, production_crew FROM call_sheets WHERE booking_id = ?');
 $callSheetStmt->execute([$bookingId]);
 $callSheet = $callSheetStmt->fetch();
 
@@ -122,6 +122,24 @@ if ($nearestAe === '' && $callSheet) {
     $nearestAe = $callSheet['nearest_ae'] ?? '';
 }
 
+$crewExperts = $ra['crew_experts'] ?? '';
+if ($crewExperts === '' && $callSheet && $callSheet['production_crew']) {
+    $crew = json_decode($callSheet['production_crew'], true) ?: [];
+    $crewExperts = implode("\n", array_filter(array_map(function ($row) {
+        $line = trim($row['name'] ?? '');
+        if ($line !== '' && !empty($row['title'])) {
+            $line .= ' - ' . $row['title'];
+        }
+        return $line;
+    }, $crew)));
+}
+if ($crewExperts === '' && (int) $booking['is_standalone_doc'] === 1) {
+    $peopleStmt = $pdo->query('SELECT name, role FROM people WHERE active = 1 AND is_main_shooter = 1 ORDER BY name ASC');
+    $crewExperts = implode("\n", array_map(function ($p) {
+        return $p['role'] ? $p['name'] . ' - ' . $p['role'] : $p['name'];
+    }, $peopleStmt->fetchAll()));
+}
+
 json_ok([
     'booking' => [
         'id' => (int) $booking['id'],
@@ -140,7 +158,7 @@ json_ok([
     'production_manager_email' => $ra['production_manager_email'] ?? '',
     'production_manager_mobile' => $ra['production_manager_mobile'] ?? '',
     'brief_description' => $ra['brief_description'] ?? '',
-    'crew_experts' => $ra['crew_experts'] ?? '',
+    'crew_experts' => $crewExperts,
     'nearest_ae' => $nearestAe,
     'standard_arrangements' => $standardArrangements,
     'hazards' => $hazards,

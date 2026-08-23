@@ -23,6 +23,7 @@ $stmt = $pdo->prepare(
      FROM bookings b
      LEFT JOIN clients c ON c.id = b.client_id
      WHERE b.status != "cancelled"
+       AND b.is_standalone_doc = 0
        AND b.start_datetime < :end
        AND b.end_datetime > :start
      ORDER BY b.start_datetime ASC'

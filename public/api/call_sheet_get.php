@@ -31,6 +31,13 @@ $attendeeStmt = $pdo->prepare(
 $attendeeStmt->execute([$bookingId]);
 $attendees = $attendeeStmt->fetchAll();
 
+// Standalone documents have no real attendees to prefill from — fall back
+// to the full active people list as a starting point to edit down from.
+if (!$attendees && (int) $booking['is_standalone_doc'] === 1) {
+    $peopleStmt = $pdo->query('SELECT id, name, role, email FROM people WHERE active = 1 AND is_main_shooter = 1 ORDER BY name ASC');
+    $attendees = $peopleStmt->fetchAll();
+}
+
 $callTime = substr((string) $booking['start_datetime'], 11, 5);
 
 if ($sheet) {
@@ -74,6 +81,10 @@ json_ok([
     'parking_notes' => $sheet['parking_notes'] ?? '',
     'weather_summary' => $sheet['weather_summary'] ?? '',
     'weather_icons' => !empty($sheet['weather_icons']) ? json_decode($sheet['weather_icons'], true) : null,
+    'weather_location' => $sheet['weather_location'] ?? '',
+    'sunrise_sunset' => $sheet['sunrise_sunset'] ?? '',
+    'weather_location_override' => $sheet['weather_location_override'] ?? '',
+    'location_map' => $sheet['location_map'] ?? '',
     'production_crew' => $productionCrew,
     'client_contacts' => $clientContacts,
     'equipment' => $equipment,

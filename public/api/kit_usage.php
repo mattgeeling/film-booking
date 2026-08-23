@@ -16,6 +16,7 @@ $stmt = db()->prepare(
     'SELECT id, title, kit_source, start_datetime, end_datetime, status
      FROM bookings
      WHERE status != "cancelled"
+       AND is_standalone_doc = 0
        AND start_datetime >= :start
        AND start_datetime < :end
      ORDER BY start_datetime ASC'

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Film Plan</title>
+  <link rel="stylesheet" href="style.css?v=20260820u">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <img class="logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+      <h1>Film Plan</h1>
+      <p>Sign in with your Fuzzy Duck Google account to continue.</p>
+      <div id="googleSignInBtn"></div>
+      <p id="authError" class="form-error hidden"></p>
+    </div>
+  </div>
+
+  <div id="appRoot" class="hidden dashboard">
+    <header class="dash-header">
+      <div class="dash-brand">
+        <img class="dash-logo" src="ducknest-logo.gif" alt="Ducknest">
+        <span class="dash-brand-name">Film Plan</span>
+      </div>
+      <div class="dash-header-right">
+        <span id="currentUserLabel" class="current-user"></span>
+        <button id="signOutBtn" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="documents-main">
+      <div class="documents-topline">
+        <a href="index.html" class="documents-back">&larr; Back to dashboard</a>
+      </div>
+      <h1 id="docTypeTitle">Generator</h1>
+      <p id="docTypeIntro" class="muted-note"></p>
+
+      <form id="newDocForm" class="documents-new-form">
+        <input type="text" id="newDocTitle" placeholder="Fuzzy Duck job number (e.g. FD101)" required>
+        <input type="date" id="newDocDate" required>
+        <input type="text" id="newDocLocation" placeholder="Location (used for the weather forecast — enter a real address or postcode)">
+        <button type="submit" class="primary">+ New document</button>
+      </form>
+      <p id="newDocError" class="form-error hidden"></p>
+
+      <div class="documents-filter">
+        <button type="button" id="filterAllBtn" class="documents-filter-btn active">All</button>
+        <button type="button" id="filterMineBtn" class="documents-filter-btn">Created by me</button>
+        <button type="button" id="filterOthersBtn" class="documents-filter-btn">Created by others</button>
+      </div>
+
+      <table class="people-table">
+        <thead>
+          <tr><th>Title</th><th>Date</th><th>Location</th><th>Created by</th><th></th></tr>
+        </thead>
+        <tbody id="docsTableBody"></tbody>
+      </table>
+      <p id="docsEmpty" class="muted-note hidden">No documents created yet.</p>
+    </main>
+  </div>
+
+  <script src="documents.js?v=20260820u"></script>
+</body>
+</html>

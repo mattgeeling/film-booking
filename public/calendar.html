@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Film Plan</title>
-  <link rel="stylesheet" href="style.css?v=20260820g">
+  <link rel="stylesheet" href="style.css?v=20260820u">
   <link rel="icon" type="image/png" href="fuzzy-duck-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,12 +96,17 @@
         <input type="text" id="personName" placeholder="Name" required>
         <input type="text" id="personRole" placeholder="Job title">
         <input type="email" id="personEmail" placeholder="Email" required>
+        <label class="checklist-item person-shooter-label">
+          <input type="checkbox" id="personIsMainShooter">
+          Main shooter
+        </label>
         <button type="submit" class="primary">Add person</button>
       </form>
       <p id="personFormError" class="form-error hidden"></p>
+      <p class="muted-note">"Main shooter" people are used to prefill the crew list on standalone Call Sheets / Risk Assessments.</p>
       <table class="people-table">
         <thead>
-          <tr><th>Name</th><th>Job title</th><th>Email</th><th>Status</th><th></th></tr>
+          <tr><th>Name</th><th>Job title</th><th>Email</th><th>Main shooter</th><th>Status</th><th></th></tr>
         </thead>
         <tbody id="peopleTableBody"></tbody>
       </table>
@@ -207,13 +212,21 @@
             Location
             <input type="text" id="fieldLocation">
           </label>
+          <p class="field-hint">A real address or postcode — this drives the call sheet's weather forecast.</p>
           <a id="fieldLocationMapsLink" href="#" target="_blank" rel="noopener" class="inline-link hidden">&#128205; Open in Google Maps</a>
 
           <label>
             What3Words
             <input type="text" id="fieldWhat3Words" placeholder="///example.words.here">
           </label>
+          <p class="field-hint">For the map link only — it can't be used to look up the weather.</p>
           <a id="fieldWhat3WordsLink" href="#" target="_blank" rel="noopener" class="inline-link hidden">&#128205; Open in what3words</a>
+
+          <label>
+            Shoot Prep folder (Google Drive)
+            <input type="url" id="fieldShootPrepFolderUrl" placeholder="https://drive.google.com/drive/folders/...">
+          </label>
+          <a id="fieldShootPrepFolderLink" href="#" target="_blank" rel="noopener" class="inline-link hidden">&#128193; Open Shoot Prep folder</a>
 
           <label>
             Client
@@ -318,6 +331,7 @@
           </div>
 
           <button type="button" id="openAllDocsBtn" class="secondary-link-btn hidden">&#128279; Open all attached documents</button>
+          <div id="openAllDocsList" class="open-docs-list hidden"></div>
         </div>
       </div>
 
@@ -361,6 +375,18 @@
       <div class="modal modal-wide callsheet-modal">
         <h2>Call sheet — <span id="callSheetTitle"></span></h2>
 
+        <label id="csShootDateRow" class="hidden">Date of shoot
+          <input type="date" id="csShootDate">
+        </label>
+
+        <div class="field-row">
+          <label>Copy from a previous call sheet
+            <select id="csCopyFromSelect"><option value="">— Select a shoot —</option></select>
+          </label>
+          <button type="button" id="csCopyFromBtn" class="secondary-link-btn">Copy crew, equipment &amp; schedule</button>
+        </div>
+        <p id="csCopyFromNote" class="muted-note hidden">Copied — review before saving.</p>
+
         <label>
           Day info
           <input type="text" id="csDayInfo" placeholder="e.g. Day 1 of 1">
@@ -375,17 +401,31 @@
           <label>Parking notes
             <textarea id="csParkingNotes" rows="2" placeholder="e.g. Crew parking for 2 vehicles..."></textarea>
           </label>
+          <div class="field-row">
+            <button type="button" id="csLoadMapBtn">Show map screenshot</button>
+          </div>
+          <p id="csMapError" class="form-error hidden"></p>
+          <img id="csLocationMapPreview" class="cs-location-map-preview hidden" alt="Map of the shoot location">
+          <input type="hidden" id="csLocationMap" value="">
         </div>
 
         <div class="callsheet-section">
           <h3>Weather</h3>
+          <label>Weather location override (optional)
+            <input type="text" id="csWeatherLocationOverride" placeholder="Use this instead of the booking's Location — e.g. a postcode, if Location isn't geocodable">
+          </label>
           <div class="field-row">
             <button type="button" id="csFetchWeatherBtn">Get live forecast</button>
           </div>
           <p id="csWeatherError" class="form-error hidden"></p>
+          <p id="csWeatherLocationNote" class="muted-note hidden"></p>
           <div id="csWeatherIconPreview" class="cs-weather-icon-row hidden"></div>
           <textarea id="csWeatherSummary" rows="2" placeholder="Forecast will appear here, or type your own"></textarea>
+          <label>Sunrise / sunset
+            <input type="text" id="csSunriseSunset" placeholder="Filled in automatically with the forecast">
+          </label>
           <input type="hidden" id="csWeatherIcons" value="">
+          <input type="hidden" id="csWeatherLocation" value="">
         </div>
 
         <div class="callsheet-section">
@@ -414,6 +454,12 @@
 
         <div class="callsheet-section">
           <h3>Nearest hospital / emergency notes</h3>
+          <div class="field-row">
+            <button type="button" id="csFindHospitalBtn">Find nearest hospital</button>
+          </div>
+          <p id="csHospitalError" class="form-error hidden"></p>
+          <div id="csHospitalCandidates" class="hospital-candidates hidden"></div>
+          <button type="button" id="csUseHospitalBtn" class="secondary-link-btn hidden">Add selected to notes</button>
           <textarea id="csNearestAe" rows="2" placeholder="e.g. Gloucestershire Royal Hospital, Great Western Rd, Gloucester (23 miles)"></textarea>
         </div>
 
@@ -421,7 +467,9 @@
         <p id="callSheetSavedNote" class="muted-note hidden">Saved.</p>
 
         <div class="modal-actions">
-          <div class="modal-actions-left"></div>
+          <div class="modal-actions-left">
+            <button type="button" id="emailCallSheetBtn">Email call sheet to crew</button>
+          </div>
           <div class="modal-actions-right">
             <button type="button" id="cancelCallSheetBtn">Close</button>
             <button type="button" id="printCallSheetBtn">Print / Save PDF</button>
@@ -465,6 +513,22 @@
       <div class="modal modal-wide callsheet-modal">
         <h2>Risk assessment — <span id="riskAssessmentTitle"></span></h2>
 
+        <label id="raShootDateRow" class="hidden">Date of shoot
+          <input type="date" id="raShootDate">
+        </label>
+
+        <div class="field-row">
+          <label>Load a saved template
+            <select id="raTemplateSelect"><option value="">— Select a template —</option></select>
+          </label>
+          <button type="button" id="raLoadTemplateBtn" class="secondary-link-btn">Load (replaces hazards &amp; arrangements)</button>
+          <button type="button" id="raDeleteTemplateBtn" class="danger">Delete template</button>
+        </div>
+        <div class="field-row">
+          <button type="button" id="raSaveTemplateBtn" class="secondary-link-btn">Save current hazards &amp; arrangements as a new template</button>
+        </div>
+        <p id="raTemplateNote" class="muted-note hidden"></p>
+
         <div class="callsheet-section">
           <div class="field-row">
             <label>Client <input type="text" id="raClientName"></label>
@@ -499,6 +563,12 @@
 
         <div class="callsheet-section">
           <h3>Nearest A&amp;E</h3>
+          <div class="field-row">
+            <button type="button" id="raFindHospitalBtn">Find nearest hospital</button>
+          </div>
+          <p id="raHospitalError" class="form-error hidden"></p>
+          <div id="raHospitalCandidates" class="hospital-candidates hidden"></div>
+          <button type="button" id="raUseHospitalBtn" class="secondary-link-btn hidden">Add selected to notes</button>
           <textarea id="raNearestAe" rows="2" placeholder="e.g. Gloucestershire Royal Hospital, Great Western Rd, Gloucester (23 miles) - severe&#10;North Cotswolds Hospital, Stow Rd, Moreton-in-Marsh (8 miles) - minor"></textarea>
         </div>
 
@@ -542,6 +612,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260820g"></script>
+  <script src="app.js?v=20260820u"></script>
 </body>
 </html>
