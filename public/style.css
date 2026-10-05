@@ -653,6 +653,8 @@ main { padding: 1rem 1.5rem 3rem; }
   padding: 1.5rem;
   width: 420px;
   max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -660,8 +662,6 @@ main { padding: 1rem 1.5rem 3rem; }
 }
 
 .modal.modal-wide { width: 680px; }
-
-#emailPreviewBackdrop .modal { max-height: calc(100vh - 4rem); overflow-y: auto; }
 
 .email-preview-frame {
   width: 100%;
@@ -1398,7 +1398,6 @@ body.standalone-mode main {
 }
 
 /* Call sheet editor */
-.callsheet-modal { max-height: calc(100vh - 4rem); overflow-y: auto; }
 
 .callsheet-section {
   border-top: 1px solid var(--border);
