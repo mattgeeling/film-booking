@@ -60,7 +60,8 @@ $stmt = $pdo->prepare(
         equipment = VALUES(equipment),
         schedule = VALUES(schedule),
         nearest_ae = VALUES(nearest_ae),
-        location_map = VALUES(location_map)'
+        location_map = VALUES(location_map),
+        updated_at = CURRENT_TIMESTAMP'
 );
 $stmt->execute([
     'booking_id' => $bookingId,

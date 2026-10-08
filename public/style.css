@@ -1636,6 +1636,7 @@ body.standalone-mode main {
 .doc-print-masthead-logo { height: 84px; display: block; flex-shrink: 0; }
 .doc-print-masthead h1 { font-size: 1.25rem; margin: 0; letter-spacing: 0.02em; }
 .doc-print-masthead .cs-day { font-size: 0.9rem; color: #333; margin: 0; }
+.doc-print-last-saved { font-size: 0.75rem; color: #555; margin: 0.25rem 0 0; }
 
 /* Risk assessment print output */
 .ra-print-header-table { margin-bottom: 0.85rem; }

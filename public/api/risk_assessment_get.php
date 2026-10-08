@@ -22,7 +22,7 @@ if (!$booking) {
     json_error('Booking not found', 404);
 }
 
-$raStmt = $pdo->prepare('SELECT * FROM risk_assessments WHERE booking_id = ?');
+$raStmt = $pdo->prepare('SELECT *, UNIX_TIMESTAMP(updated_at) AS updated_ts FROM risk_assessments WHERE booking_id = ?');
 $raStmt->execute([$bookingId]);
 $ra = $raStmt->fetch();
 
@@ -167,4 +167,5 @@ json_ok([
     'signoff_producer_name' => $ra['signoff_producer_name'] ?? '',
     'signoff_producer_date' => $ra['signoff_producer_date'] ?? '',
     'saved' => (bool) $ra,
+    'updated_at' => $ra ? (int) $ra['updated_ts'] : null,
 ]);

@@ -68,7 +68,8 @@ $stmt = $pdo->prepare(
         signoff_director_name = VALUES(signoff_director_name),
         signoff_director_date = VALUES(signoff_director_date),
         signoff_producer_name = VALUES(signoff_producer_name),
-        signoff_producer_date = VALUES(signoff_producer_date)'
+        signoff_producer_date = VALUES(signoff_producer_date),
+        updated_at = CURRENT_TIMESTAMP'
 );
 $stmt->execute([
     'booking_id' => $bookingId,

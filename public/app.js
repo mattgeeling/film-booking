@@ -1665,11 +1665,26 @@
     }).filter((obj) => Object.values(obj).some((v) => v));
   }
 
+  function formatLastSaved(ms) {
+    return new Date(ms).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // doc is 'callSheet' or 'riskAssessment'; ms is null when never saved.
+  function setLastSaved(doc, ms) {
+    state[`${doc}LastSaved`] = ms;
+    el[`${doc}SavedNote`].textContent = ms ? `Last saved ${formatLastSaved(ms)}` : 'Not saved yet';
+  }
+
+  function lastSavedPrintHtml(doc) {
+    const ms = state[`${doc}LastSaved`];
+    return ms ? `<p class="doc-print-last-saved">Last saved ${csEscapeHtml(formatLastSaved(ms))}</p>` : '';
+  }
+
   async function openCallSheet(booking) {
     state.callSheetBooking = booking;
     el.callSheetTitle.textContent = booking.title;
     el.callSheetError.classList.add('hidden');
-    el.callSheetSavedNote.classList.add('hidden');
+    setLastSaved('callSheet', null);
     el.csWeatherError.classList.add('hidden');
     el.csHospitalError.classList.add('hidden');
     el.csHospitalCandidates.classList.add('hidden');
@@ -1700,6 +1715,7 @@
       updateWeatherLocationNote();
       renderWeatherIconPreview(data.weather_icons, data.weather_summary);
       el.csNearestAe.value = data.nearest_ae || '';
+      setLastSaved('callSheet', data.updated_at ? data.updated_at * 1000 : null);
       el.csLocationMap.value = data.location_map || '';
       if (data.location_map) {
         el.csLocationMapPreview.src = data.location_map;
@@ -1776,7 +1792,6 @@
   async function saveCallSheet() {
     if (!state.callSheetBooking) return;
     el.callSheetError.classList.add('hidden');
-    el.callSheetSavedNote.classList.add('hidden');
     el.saveCallSheetBtn.disabled = true;
     try {
       await apiPost(`api/call_sheet_save.php?booking_id=${state.callSheetBooking.id}`, {
@@ -1803,7 +1818,7 @@
           what3words: el.csWhat3Words.value.trim(),
         });
       }
-      el.callSheetSavedNote.classList.remove('hidden');
+      setLastSaved('callSheet', Date.now());
     } catch (err) {
       el.callSheetError.textContent = err.message;
       el.callSheetError.classList.remove('hidden');
@@ -2202,6 +2217,7 @@
         <img class="cs-print-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
         <h1>${csEscapeHtml(booking.title)}</h1>
         <p class="cs-day">${dayInfo ? dayInfo + ' — ' : ''}${dateLabel}</p>
+        ${lastSavedPrintHtml('callSheet')}
       </div>
       <div class="cs-print-confidential">
         <strong>STRICTLY CONFIDENTIAL</strong>
@@ -2491,7 +2507,7 @@
     state.riskAssessmentBooking = booking;
     el.riskAssessmentTitle.textContent = booking.title;
     el.riskAssessmentError.classList.add('hidden');
-    el.riskAssessmentSavedNote.classList.add('hidden');
+    setLastSaved('riskAssessment', null);
     el.raHospitalError.classList.add('hidden');
     el.raHospitalCandidates.classList.add('hidden');
     el.raHospitalCandidates.innerHTML = '';
@@ -2520,6 +2536,7 @@
       el.raBriefDescription.value = data.brief_description || '';
       el.raCrewExperts.value = data.crew_experts || '';
       el.raNearestAe.value = data.nearest_ae || '';
+      setLastSaved('riskAssessment', data.updated_at ? data.updated_at * 1000 : null);
       el.raSignoffDirectorName.value = data.signoff_director_name || '';
       el.raSignoffDirectorDate.value = data.signoff_director_date || '';
       el.raSignoffProducerName.value = data.signoff_producer_name || '';
@@ -2619,7 +2636,6 @@
   async function saveRiskAssessment() {
     if (!state.riskAssessmentBooking) return;
     el.riskAssessmentError.classList.add('hidden');
-    el.riskAssessmentSavedNote.classList.add('hidden');
     el.saveRiskAssessmentBtn.disabled = true;
     try {
       await apiPost(`api/risk_assessment_save.php?booking_id=${state.riskAssessmentBooking.id}`, {
@@ -2648,7 +2664,7 @@
           what3words: el.raWhat3Words.value.trim(),
         });
       }
-      el.riskAssessmentSavedNote.classList.remove('hidden');
+      setLastSaved('riskAssessment', Date.now());
     } catch (err) {
       el.riskAssessmentError.textContent = err.message;
       el.riskAssessmentError.classList.remove('hidden');
@@ -2724,6 +2740,7 @@
         <div class="doc-print-masthead-text">
           <h1>PRODUCTION RISK ASSESSMENT</h1>
           <p class="cs-day">${csEscapeHtml(booking.title)} — ${dateLabel}</p>
+          ${lastSavedPrintHtml('riskAssessment')}
         </div>
         <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
       </div>

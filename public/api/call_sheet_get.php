@@ -18,7 +18,7 @@ if (!$booking) {
     json_error('Booking not found', 404);
 }
 
-$sheetStmt = $pdo->prepare('SELECT * FROM call_sheets WHERE booking_id = ?');
+$sheetStmt = $pdo->prepare('SELECT *, UNIX_TIMESTAMP(updated_at) AS updated_ts FROM call_sheets WHERE booking_id = ?');
 $sheetStmt->execute([$bookingId]);
 $sheet = $sheetStmt->fetch();
 
@@ -91,4 +91,5 @@ json_ok([
     'schedule' => $schedule,
     'nearest_ae' => $sheet['nearest_ae'] ?? '',
     'saved' => (bool) $sheet,
+    'updated_at' => $sheet ? (int) $sheet['updated_ts'] : null,
 ]);
