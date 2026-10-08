@@ -1867,19 +1867,32 @@
     // only hard-exclude ones OSM explicitly says have no emergency care, and
     // let the person choose from the nearest few with a confidence label.
     const query = `[out:json][timeout:25];(node["amenity"="hospital"](around:60000,${lat},${lon});way["amenity"="hospital"](around:60000,${lat},${lon}););out center tags;`;
-    let res;
-    try {
-      res = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: query,
-      });
-    } catch (err) {
-      throw new Error('Could not reach the hospital lookup service — try again shortly, or add one manually.');
+    // The public Overpass servers often time out (504) or rate-limit (429)
+    // under load, so fall through to a mirror and then one retry of the main
+    // server after a short pause before giving up.
+    const overpassMirrors = [
+      'https://overpass-api.de/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+    ];
+    let data = null;
+    let lastError = 'Could not reach the hospital lookup service';
+    for (const [i, url] of overpassMirrors.entries()) {
+      if (i === overpassMirrors.length - 1) await new Promise((r) => setTimeout(r, 3000));
+      try {
+        const res = await fetch(url, { method: 'POST', body: query });
+        if (res.ok) {
+          data = await res.json();
+          break;
+        }
+        lastError = `Hospital lookup service returned an error (${res.status})`;
+      } catch (err) {
+        // Network/CORS failure on this mirror — try the next one.
+      }
     }
-    if (!res.ok) {
-      throw new Error(`Hospital lookup service returned an error (${res.status}) — try again shortly, or add one manually.`);
+    if (!data) {
+      throw new Error(`${lastError} — try again shortly, or add one manually.`);
     }
-    const data = await res.json();
     // Names that are almost always GP surgeries/care homes/hospices
     // mistakenly tagged amenity=hospital in OSM, not acute hospitals.
     const nonHospitalNamePattern = /medical centre|surgery|practi[cs]e|care home|hospice|clinic/i;
