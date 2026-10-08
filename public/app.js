@@ -1932,8 +1932,7 @@
     const candidates = JSON.parse(listEl.dataset.candidates || '[]');
     const chosen = candidates[Number(checked.value)];
     if (!chosen) return;
-    const existing = targetEl.value.trim();
-    targetEl.value = existing ? `${existing}\n${chosen.text}` : chosen.text;
+    targetEl.value = chosen.text;
     listEl.classList.add('hidden');
     listEl.innerHTML = '';
   }
