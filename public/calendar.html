@@ -375,9 +375,18 @@
       <div class="modal modal-wide callsheet-modal">
         <h2>Call sheet — <span id="callSheetTitle"></span></h2>
 
-        <label id="csShootDateRow" class="hidden">Date of shoot
-          <input type="date" id="csShootDate">
-        </label>
+        <div id="csShootDateRow" class="standalone-fields hidden">
+          <label>Date of shoot
+            <input type="date" id="csShootDate">
+          </label>
+          <label>Location
+            <input type="text" id="csLocation">
+          </label>
+          <p class="field-hint">A real address or postcode — used for the address, nearest A&amp;E lookup and weather forecast.</p>
+          <label>What3Words
+            <input type="text" id="csWhat3Words" placeholder="///example.words.here">
+          </label>
+        </div>
 
         <div class="field-row">
           <label>Copy from a previous call sheet
@@ -513,9 +522,18 @@
       <div class="modal modal-wide callsheet-modal">
         <h2>Risk assessment — <span id="riskAssessmentTitle"></span></h2>
 
-        <label id="raShootDateRow" class="hidden">Date of shoot
-          <input type="date" id="raShootDate">
-        </label>
+        <div id="raShootDateRow" class="standalone-fields hidden">
+          <label>Date of shoot
+            <input type="date" id="raShootDate">
+          </label>
+          <label>Location
+            <input type="text" id="raLocation">
+          </label>
+          <p class="field-hint">A real address or postcode — used for the printed address and the nearest A&amp;E lookup.</p>
+          <label>What3Words
+            <input type="text" id="raWhat3Words" placeholder="///example.words.here">
+          </label>
+        </div>
 
         <div class="field-row">
           <label>Load a saved template

@@ -114,6 +114,8 @@
     callSheetTitle: document.getElementById('callSheetTitle'),
     csShootDateRow: document.getElementById('csShootDateRow'),
     csShootDate: document.getElementById('csShootDate'),
+    csLocation: document.getElementById('csLocation'),
+    csWhat3Words: document.getElementById('csWhat3Words'),
     csCopyFromSelect: document.getElementById('csCopyFromSelect'),
     csCopyFromBtn: document.getElementById('csCopyFromBtn'),
     csCopyFromNote: document.getElementById('csCopyFromNote'),
@@ -170,6 +172,8 @@
     riskAssessmentTitle: document.getElementById('riskAssessmentTitle'),
     raShootDateRow: document.getElementById('raShootDateRow'),
     raShootDate: document.getElementById('raShootDate'),
+    raLocation: document.getElementById('raLocation'),
+    raWhat3Words: document.getElementById('raWhat3Words'),
     raTemplateSelect: document.getElementById('raTemplateSelect'),
     raLoadTemplateBtn: document.getElementById('raLoadTemplateBtn'),
     raDeleteTemplateBtn: document.getElementById('raDeleteTemplateBtn'),
@@ -1679,7 +1683,11 @@
       state.callSheetBooking = data.booking;
       el.callSheetTitle.textContent = data.booking.title;
       el.csShootDateRow.classList.toggle('hidden', !state.standaloneDocType);
-      if (state.standaloneDocType) el.csShootDate.value = data.booking.start_datetime.slice(0, 10);
+      if (state.standaloneDocType) {
+        el.csShootDate.value = data.booking.start_datetime.slice(0, 10);
+        el.csLocation.value = data.booking.location || '';
+        el.csWhat3Words.value = data.booking.what3words || '';
+      }
       el.csDayInfo.value = data.day_info || '';
       el.csLocationContactName.value = data.location_contact_name || '';
       el.csLocationContactPhone.value = data.location_contact_phone || '';
@@ -1788,8 +1796,12 @@
         equipment: collectCallSheetRows(el.csEquipmentRows, ['supplier', 'items']),
         schedule: collectCallSheetRows(el.csScheduleRows, ['time', 'description']),
       });
-      if (state.standaloneDocType && el.csShootDate.value) {
-        await apiPost(`api/standalone_doc_update.php?id=${state.callSheetBooking.id}`, { date: el.csShootDate.value });
+      if (state.standaloneDocType) {
+        await apiPost(`api/standalone_doc_update.php?id=${state.callSheetBooking.id}`, {
+          date: el.csShootDate.value,
+          location: el.csLocation.value.trim(),
+          what3words: el.csWhat3Words.value.trim(),
+        });
       }
       el.callSheetSavedNote.classList.remove('hidden');
     } catch (err) {
@@ -2493,7 +2505,11 @@
       state.riskAssessmentBooking = data.booking;
       el.riskAssessmentTitle.textContent = data.booking.title;
       el.raShootDateRow.classList.toggle('hidden', !state.standaloneDocType);
-      if (state.standaloneDocType) el.raShootDate.value = data.booking.start_datetime.slice(0, 10);
+      if (state.standaloneDocType) {
+        el.raShootDate.value = data.booking.start_datetime.slice(0, 10);
+        el.raLocation.value = data.booking.location || '';
+        el.raWhat3Words.value = data.booking.what3words || '';
+      }
       el.raClientName.value = data.client_name || '';
       el.raLocationContact.value = data.location_contact || '';
       el.raDirectorName.value = data.director_name || '';
@@ -2626,8 +2642,12 @@
         signoff_producer_name: el.raSignoffProducerName.value.trim(),
         signoff_producer_date: el.raSignoffProducerDate.value,
       });
-      if (state.standaloneDocType && el.raShootDate.value) {
-        await apiPost(`api/standalone_doc_update.php?id=${state.riskAssessmentBooking.id}`, { date: el.raShootDate.value });
+      if (state.standaloneDocType) {
+        await apiPost(`api/standalone_doc_update.php?id=${state.riskAssessmentBooking.id}`, {
+          date: el.raShootDate.value,
+          location: el.raLocation.value.trim(),
+          what3words: el.raWhat3Words.value.trim(),
+        });
       }
       el.riskAssessmentSavedNote.classList.remove('hidden');
     } catch (err) {
@@ -3514,6 +3534,13 @@
   el.openRiskAssessmentBtn.addEventListener('click', () => { if (state.editingBooking) openRiskAssessment(state.editingBooking); });
   el.cancelRiskAssessmentBtn.addEventListener('click', closeRiskAssessment);
   el.saveRiskAssessmentBtn.addEventListener('click', saveRiskAssessment);
+
+  // Standalone docs edit their placeholder booking's location directly, so the
+  // hospital/weather lookups and printed address use it before saving.
+  el.csLocation.addEventListener('input', () => { if (state.callSheetBooking) state.callSheetBooking.location = el.csLocation.value.trim(); });
+  el.csWhat3Words.addEventListener('input', () => { if (state.callSheetBooking) state.callSheetBooking.what3words = el.csWhat3Words.value.trim(); });
+  el.raLocation.addEventListener('input', () => { if (state.riskAssessmentBooking) state.riskAssessmentBooking.location = el.raLocation.value.trim(); });
+  el.raWhat3Words.addEventListener('input', () => { if (state.riskAssessmentBooking) state.riskAssessmentBooking.what3words = el.raWhat3Words.value.trim(); });
   el.printRiskAssessmentBtn.addEventListener('click', onPrintRiskAssessmentClick);
   el.riskAssessmentBackdrop.addEventListener('click', (e) => { if (e.target === el.riskAssessmentBackdrop) closeRiskAssessment(); });
   el.raAddHazardRow.addEventListener('click', () => buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, {}));

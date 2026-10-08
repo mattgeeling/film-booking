@@ -17,17 +17,28 @@ if (!$stmt->fetch()) {
 }
 
 $body = json_body();
-$date = trim((string) ($body['date'] ?? ''));
-$startDt = DateTime::createFromFormat('Y-m-d', $date);
-if (!$startDt) {
-    json_error('Invalid date');
-}
+$location = trim((string) ($body['location'] ?? ''));
+$what3words = trim((string) ($body['what3words'] ?? ''));
 
-$update = $pdo->prepare('UPDATE bookings SET start_datetime = :start, end_datetime = :end WHERE id = :id');
-$update->execute([
-    'start' => $startDt->format('Y-m-d') . ' 09:00:00',
-    'end' => $startDt->format('Y-m-d') . ' 17:00:00',
+$pdo->prepare('UPDATE bookings SET location = :location, what3words = :what3words WHERE id = :id')->execute([
+    'location' => $location ?: null,
+    'what3words' => $what3words ?: null,
     'id' => $id,
 ]);
+
+// Date is optional: left unchanged if blank.
+$date = trim((string) ($body['date'] ?? ''));
+if ($date !== '') {
+    $startDt = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$startDt) {
+        json_error('Invalid date');
+    }
+    $update = $pdo->prepare('UPDATE bookings SET start_datetime = :start, end_datetime = :end WHERE id = :id');
+    $update->execute([
+        'start' => $startDt->format('Y-m-d') . ' 09:00:00',
+        'end' => $startDt->format('Y-m-d') . ' 17:00:00',
+        'id' => $id,
+    ]);
+}
 
 json_ok(['id' => $id]);

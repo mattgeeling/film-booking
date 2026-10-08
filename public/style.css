@@ -1307,6 +1307,8 @@ main { padding: 1rem 1.5rem 3rem; }
 
 .hidden { display: none !important; }
 
+.standalone-fields { display: flex; flex-direction: column; gap: 0.5rem; }
+
 body.standalone-mode .topbar,
 body.standalone-mode main {
   display: none !important;
