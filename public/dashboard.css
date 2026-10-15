@@ -5,14 +5,14 @@ html, body { height: 100%; }
 .dash-header {
   background: var(--panel);
   border-bottom: 1px solid var(--border);
-  padding: 0.85rem 2rem;
+  padding: 0.5rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .dash-brand { display: flex; align-items: center; gap: 0.65rem; }
-.dash-logo { height: 100px; width: 100px; border-radius: 50%; object-fit: cover; }
+.dash-logo { height: 52px; width: 52px; border-radius: 50%; object-fit: cover; }
 .dash-brand-name { font-size: 1.15rem; font-weight: 700; }
 
 .dash-header-right { display: flex; align-items: center; gap: 0.85rem; }
@@ -20,7 +20,7 @@ html, body { height: 100%; }
 .dash-hero {
   flex: 1 0 auto;
   background: var(--brand-yellow);
-  padding: 2rem 2rem 2rem;
+  padding: 1.25rem 2rem;
 }
 
 .dash-intro-row {
@@ -28,8 +28,8 @@ html, body { height: 100%; }
   grid-template-columns: 1.1fr 1fr;
   gap: 2rem;
   max-width: 1200px;
-  margin: 0 auto 1.5rem;
-  align-items: start;
+  margin: 0 auto 1rem;
+  align-items: center;
 }
 
 .dash-intro {
@@ -38,7 +38,7 @@ html, body { height: 100%; }
   gap: 1.5rem;
 }
 
-.dash-intro p { margin: 0.5rem 0; line-height: 1.5; }
+.dash-intro p { margin: 0.25rem 0; line-height: 1.45; }
 .dash-intro p:first-of-type { font-weight: 700; }
 
 .dash-stats {
@@ -50,12 +50,11 @@ html, body { height: 100%; }
 .dash-stat-tile {
   background: var(--panel);
   border: 2px solid var(--accent);
-  border-radius: 24px;
-  padding: 1rem 0.9rem;
+  border-radius: 16px;
+  padding: 0.6rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-height: 110px;
+  gap: 0.25rem;
 }
 
 .dash-stat-label {
@@ -67,9 +66,9 @@ html, body { height: 100%; }
 }
 
 .dash-stat-value {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .dash-cards-row {
@@ -81,24 +80,24 @@ html, body { height: 100%; }
 }
 
 .dash-card-icon {
-  width: 302px;
-  height: 302px;
+  width: 110px;
+  height: 110px;
   object-fit: contain;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
   align-self: center;
 }
 
 .dash-card {
   background: var(--panel);
   border: 2px solid var(--accent);
-  border-radius: 24px;
-  padding: 1.1rem 1.25rem 1.35rem;
+  border-radius: 16px;
+  padding: 0.85rem 1.1rem 1rem;
   display: flex;
   flex-direction: column;
 }
 
-.dash-card h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
-.dash-card p { margin: 0 0 1rem; color: var(--text); line-height: 1.5; flex: 1; }
+.dash-card h2 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.dash-card p { margin: 0 0 0.75rem; color: var(--text); font-size: 0.9rem; line-height: 1.4; flex: 1; }
 
 .dash-card-btn {
   display: inline-block;
@@ -110,7 +109,7 @@ html, body { height: 100%; }
   letter-spacing: 0.02em;
   text-decoration: none;
   text-transform: uppercase;
-  padding: 0.65rem 1rem;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
 }
 
@@ -127,24 +126,24 @@ html, body { height: 100%; }
   grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
   max-width: 1200px;
-  margin: 1.25rem auto 0;
+  margin: 1rem auto 0;
 }
 
 .dash-panel {
   background: var(--panel);
   border: 2px solid var(--accent);
-  border-radius: 24px;
-  padding: 1.25rem 1.5rem 1.5rem;
+  border-radius: 16px;
+  padding: 0.85rem 1.25rem 1rem;
 }
 
 .dash-panel h3 {
-  margin: 0 0 0.85rem;
-  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.dash-panel-list { display: flex; flex-direction: column; gap: 0.65rem; }
+.dash-panel-list { display: flex; flex-direction: column; gap: 0.45rem; max-height: 190px; overflow-y: auto; }
 
 .dash-panel-empty { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
@@ -152,7 +151,7 @@ html, body { height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding-bottom: 0.6rem;
+  padding-bottom: 0.45rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -192,8 +191,8 @@ html, body { height: 100%; }
   background: var(--accent);
   color: var(--brand-yellow);
   text-align: center;
-  padding: 1rem;
-  font-size: 0.85rem;
+  padding: 0.6rem;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 860px) {
