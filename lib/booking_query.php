@@ -52,4 +52,5 @@ const BOOKING_SELECT_COLUMNS = 'b.id, b.title, b.location, b.what3words, b.shoot
     b.checklist_shot_list, b.checklist_shot_list_by, b.checklist_shot_list_url, b.checklist_shot_list_na,
     b.checklist_preproduction_creative, b.checklist_preproduction_creative_by, b.checklist_preproduction_creative_url,
     b.checklist_additional_documents, b.checklist_additional_documents_by, b.checklist_additional_documents_url,
-    b.skip_calendar_sync, b.kit_source, b.created_by_name, b.client_id, c.name AS client_name, c.logo_path AS client_logo_path';
+    b.skip_calendar_sync, b.kit_source, b.created_by_name, b.client_id, c.name AS client_name, c.logo_path AS client_logo_path,
+    b.synergist_job_number';

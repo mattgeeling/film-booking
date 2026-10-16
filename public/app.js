@@ -58,6 +58,9 @@
     bookingForm: document.getElementById('bookingForm'),
     modalTitle: document.getElementById('modalTitle'),
     fieldTitle: document.getElementById('fieldTitle'),
+    fieldJobNumber: document.getElementById('fieldJobNumber'),
+    fieldJobHint: document.getElementById('fieldJobHint'),
+    jobOptions: document.getElementById('jobOptions'),
     fieldDate: document.getElementById('fieldDate'),
     fieldStart: document.getElementById('fieldStart'),
     fieldEnd: document.getElementById('fieldEnd'),
@@ -1368,6 +1371,8 @@
     el.fieldStart.value = '09:00';
     el.fieldEnd.value = '17:00';
     el.fieldClient.value = '';
+    el.fieldJobNumber.value = '';
+    updateJobHint();
     el.fieldKitSource.value = 'fuzzy_duck';
     updateLocationMapsLink();
     updateWhat3WordsLink();
@@ -1410,6 +1415,8 @@
     el.fieldWhat3Words.value = booking.what3words || '';
     el.fieldShootPrepFolderUrl.value = booking.shoot_prep_folder_url || '';
     el.fieldClient.value = booking.client_id ? String(booking.client_id) : '';
+    el.fieldJobNumber.value = booking.synergist_job_number ? String(Number(booking.synergist_job_number.split('/').pop())) : '';
+    updateJobHint();
     el.fieldKitSource.value = booking.kit_source || 'fuzzy_duck';
     updateLocationMapsLink();
     updateWhat3WordsLink();
@@ -1447,6 +1454,31 @@
     scheduleConflictCheck();
   }
 
+  // Synergist job box: suggestions are live jobs from Job Health
+  // ("12422 · MATH127 Guinness World Records"); only the number is saved.
+  let liveJobs = [];
+  async function loadLiveJobs() {
+    try {
+      const res = await fetch('api/jobs_lookup.php', { credentials: 'same-origin' });
+      const data = await res.json();
+      liveJobs = (data.data && data.data.jobs) || [];
+      el.jobOptions.innerHTML = liveJobs.map((j) => {
+        const n = String(Number(String(j.job_number).split('/').pop()));
+        return `<option value="${n} · ${String(j.title || '').replace(/"/g, '&quot;')}">${j.client_name ? String(j.client_name).replace(/</g, '&lt;') : ''}</option>`;
+      }).join('');
+      updateJobHint();
+    } catch (e) { /* the box still takes a typed number */ }
+  }
+
+  function updateJobHint() {
+    const n = el.fieldJobNumber.value.trim().split(' ')[0];
+    const job = liveJobs.find((j) => String(Number(String(j.job_number).split('/').pop())) === n);
+    el.fieldJobHint.textContent = !n
+      ? 'Puts confirmed shoots on Job Health\'s schedule against this job\'s Filming phase.'
+      : job ? `✓ ${job.title}${job.client_name ? ` · ${job.client_name}` : ''}`
+      : (/^\d+$/.test(n) ? 'Not a live job in Synergist — check the number' : 'Use the job number, e.g. 12422');
+  }
+
   function closeModal() {
     el.modalBackdrop.classList.add('hidden');
     state.editingId = null;
@@ -1473,6 +1505,7 @@
       what3words: el.fieldWhat3Words.value.trim(),
       shoot_prep_folder_url: el.fieldShootPrepFolderUrl.value.trim(),
       client_id: el.fieldClient.value ? Number(el.fieldClient.value) : null,
+      synergist_job_number: el.fieldJobNumber.value.trim().split(' ')[0],
       kit_source: el.fieldKitSource.value,
       notes: el.fieldNotes.value.trim(),
       start_datetime: `${el.fieldDate.value}T${el.fieldStart.value}`,
@@ -3502,6 +3535,10 @@
   el.blockedDayForm.addEventListener('submit', onBlockedDayFormSubmit);
   el.clientForm.addEventListener('submit', onClientFormSubmit);
   el.fieldLocation.addEventListener('input', updateLocationMapsLink);
+  if (el.fieldJobNumber) {
+    el.fieldJobNumber.addEventListener('input', updateJobHint);
+    loadLiveJobs();
+  }
   el.fieldWhat3Words.addEventListener('input', updateWhat3WordsLink);
   el.fieldShootPrepFolderUrl.addEventListener('input', updateShootPrepFolderLink);
   el.fieldDate.addEventListener('input', scheduleConflictCheck);

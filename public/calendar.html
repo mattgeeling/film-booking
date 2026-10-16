@@ -193,6 +193,13 @@
             <input type="text" id="fieldTitle" required>
           </label>
 
+          <label>
+            Synergist job
+            <input type="text" id="fieldJobNumber" list="jobOptions" placeholder="Job number, e.g. 12422" autocomplete="off">
+          </label>
+          <datalist id="jobOptions"></datalist>
+          <p class="field-hint" id="fieldJobHint">Puts confirmed shoots on Job Health's schedule against this job's Filming phase.</p>
+
           <div class="field-row">
             <label>
               Date

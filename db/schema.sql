@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   what3words     VARCHAR(255) NULL,
   shoot_prep_folder_url VARCHAR(500) NULL,
   client_id      INT UNSIGNED NULL,
+  synergist_job_number VARCHAR(20) NULL, -- e.g. 1/00012422 — links the shoot to Job Health's schedule
   notes          TEXT NULL,
   start_datetime DATETIME NOT NULL,
   end_datetime   DATETIME NOT NULL,
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   cancelled_at   TIMESTAMP NULL,
   INDEX idx_start (start_datetime),
   INDEX idx_status (status),
+  INDEX idx_synergist_job (synergist_job_number),
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 

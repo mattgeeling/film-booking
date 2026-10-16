@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/booking_sync.php';
+require_once __DIR__ . '/../../lib/synergist_job.php';
 
 $userEmail = require_login();
 
@@ -30,6 +31,14 @@ $shootPrepFolderUrl = trim((string) ($body['shoot_prep_folder_url'] ?? ($booking
 $clientId = array_key_exists('client_id', $body)
     ? (!empty($body['client_id']) ? (int) $body['client_id'] : null)
     : $booking['client_id'];
+$jobNumber = $booking['synergist_job_number'] ?? null;
+if (array_key_exists('synergist_job_number', $body)) {
+    $jobInput = trim((string) $body['synergist_job_number']);
+    $jobNumber = $jobInput === '' ? null : normalize_synergist_job($jobInput);
+    if ($jobInput !== '' && $jobNumber === null) {
+        json_error('Synergist job should be a job number, e.g. 12422');
+    }
+}
 $notes = trim((string) ($body['notes'] ?? ($booking['notes'] ?? '')));
 $start = (string) ($body['start_datetime'] ?? $booking['start_datetime']);
 $end = (string) ($body['end_datetime'] ?? $booking['end_datetime']);
@@ -130,7 +139,7 @@ try {
     $stmt = $pdo->prepare(
         'UPDATE bookings SET title = :title, location = :location, what3words = :what3words,
          shoot_prep_folder_url = :shoot_prep_folder_url,
-         client_id = :client_id, notes = :notes,
+         client_id = :client_id, synergist_job_number = :synergist_job_number, notes = :notes,
          start_datetime = :start, end_datetime = :end,
          checklist_call_sheet = :call_sheet, checklist_call_sheet_by = :call_sheet_by, checklist_call_sheet_url = :call_sheet_url,
          checklist_risk_assessment = :risk, checklist_risk_assessment_by = :risk_by, checklist_risk_assessment_url = :risk_url,
@@ -146,6 +155,7 @@ try {
         'what3words' => $what3words ?: null,
         'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
         'client_id' => $clientId,
+        'synergist_job_number' => $jobNumber,
         'notes' => $notes ?: null,
         'start' => $startDt->format('Y-m-d H:i:s'),
         'end' => $endDt->format('Y-m-d H:i:s'),

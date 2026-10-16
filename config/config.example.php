@@ -28,5 +28,13 @@ return [
     // to assets like the logo from emails.
     'base_url' => 'https://ducknest.co.uk/film-booking/public',
 
+    // Link with Job Health (same key in both apps): Job Health reads shoots
+    // from api/integration_bookings.php; the booking form's Synergist job box
+    // gets live jobs from Job Health.
+    'integration' => [
+        'key' => '',
+        'job_health_url' => 'https://ducknest.co.uk/job-health/public',
+    ],
+
     'timezone' => 'Europe/London',
 ];

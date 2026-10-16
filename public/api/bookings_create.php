@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/booking_sync.php';
+require_once __DIR__ . '/../../lib/synergist_job.php';
 
 $userEmail = require_login();
 $body = json_body();
@@ -11,6 +12,11 @@ $location = trim((string) ($body['location'] ?? ''));
 $what3words = trim((string) ($body['what3words'] ?? ''));
 $shootPrepFolderUrl = trim((string) ($body['shoot_prep_folder_url'] ?? ''));
 $clientId = !empty($body['client_id']) ? (int) $body['client_id'] : null;
+$jobInput = trim((string) ($body['synergist_job_number'] ?? ''));
+$jobNumber = $jobInput === '' ? null : normalize_synergist_job($jobInput);
+if ($jobInput !== '' && $jobNumber === null) {
+    json_error('Synergist job should be a job number, e.g. 12422');
+}
 $notes = trim((string) ($body['notes'] ?? ''));
 $start = (string) ($body['start_datetime'] ?? '');
 $end = (string) ($body['end_datetime'] ?? '');
@@ -85,14 +91,14 @@ if ($clientId !== null) {
 $pdo->beginTransaction();
 try {
     $stmt = $pdo->prepare(
-        'INSERT INTO bookings (title, location, what3words, shoot_prep_folder_url, client_id, notes, start_datetime, end_datetime, status, created_by, created_by_name,
+        'INSERT INTO bookings (title, location, what3words, shoot_prep_folder_url, client_id, synergist_job_number, notes, start_datetime, end_datetime, status, created_by, created_by_name,
             checklist_call_sheet, checklist_call_sheet_by, checklist_call_sheet_url,
             checklist_risk_assessment, checklist_risk_assessment_by, checklist_risk_assessment_url,
             checklist_shot_list, checklist_shot_list_by, checklist_shot_list_url, checklist_shot_list_na,
             checklist_preproduction_creative, checklist_preproduction_creative_by, checklist_preproduction_creative_url,
             checklist_additional_documents, checklist_additional_documents_by, checklist_additional_documents_url,
             skip_calendar_sync, kit_source)
-         VALUES (:title, :location, :what3words, :shoot_prep_folder_url, :client_id, :notes, :start, :end, "pencil", :created_by, :created_by_name,
+         VALUES (:title, :location, :what3words, :shoot_prep_folder_url, :client_id, :synergist_job_number, :notes, :start, :end, "pencil", :created_by, :created_by_name,
             :call_sheet, :call_sheet_by, :call_sheet_url,
             :risk, :risk_by, :risk_url, :shot_list, :shot_list_by, :shot_list_url, :shot_list_na,
             :preprod, :preprod_by, :preprod_url,
@@ -104,6 +110,7 @@ try {
         'what3words' => $what3words ?: null,
         'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,
         'client_id' => $clientId,
+        'synergist_job_number' => $jobNumber,
         'notes' => $notes ?: null,
         'start' => $startDt->format('Y-m-d H:i:s'),
         'end' => $endDt->format('Y-m-d H:i:s'),

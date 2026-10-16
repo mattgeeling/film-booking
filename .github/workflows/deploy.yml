@@ -42,6 +42,10 @@ jobs:
                   'from_name' => 'Film Plan',
               ],
               'base_url' => 'https://ducknest.co.uk/film-booking/public',
+              'integration' => [
+                  'key' => '${{ secrets.INTEGRATION_KEY }}',
+                  'job_health_url' => 'https://ducknest.co.uk/job-health/public',
+              ],
               'timezone' => 'Europe/London',
           ];
           PHP
