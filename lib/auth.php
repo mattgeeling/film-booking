@@ -9,6 +9,31 @@ function require_login(): string
     return $email;
 }
 
+// Only these four can add or change anything; everyone else signed in
+// (any Fuzzy Duck Google account) can view. Same list as the Ducknest.
+const FULL_ACCESS = [
+    'matt@fuzzyduck.co.uk',
+    'kate.hughes@fuzzyduck.co.uk',
+    'louis@fuzzyduck.co.uk',
+    'greg@fuzzyduck.co.uk',
+];
+
+function can_edit(): bool
+{
+    $email = current_user_email();
+    return $email !== null && in_array(strtolower(trim($email)), FULL_ACCESS, true);
+}
+
+/** For anything that adds or changes: signed in and one of the four. */
+function require_editor(): string
+{
+    $email = require_login();
+    if (!can_edit()) {
+        json_error('View only — ask Matt, Kate, Louis or Greg to add or change bookings', 403);
+    }
+    return $email;
+}
+
 function current_user_email(): ?string
 {
     return $_SESSION['user_email'] ?? null;

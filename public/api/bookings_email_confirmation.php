@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/mailer.php';
 
-require_login();
+require_editor();
 
 $id = (int) ($_GET['id'] ?? 0);
 if ($id <= 0) {

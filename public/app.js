@@ -3690,6 +3690,10 @@
   (async function init() {
     try {
       const user = await apiGet('api/auth_me.php');
+      // Only Matt, Kate, Louis and Greg change bookings; everyone else views.
+      if (user && user.can_edit === false) document.body.classList.add('view-only');
+      // Opened inside the Ducknest: its header and Home button are around us.
+      if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embedded');
       await showApp(user);
     } catch (err) {
       showAuthGate();

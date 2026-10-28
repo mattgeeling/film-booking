@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/uploads.php';
 
-require_login();
+require_editor();
 
 $name = trim((string) ($_POST['name'] ?? ''));
 if ($name === '') {

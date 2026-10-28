@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 
-$userEmail = require_login();
+$userEmail = require_editor();
 
 $bookingId = (int) ($_GET['booking_id'] ?? 0);
 if ($bookingId <= 0) {

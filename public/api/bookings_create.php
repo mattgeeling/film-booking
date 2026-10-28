@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/booking_sync.php';
 require_once __DIR__ . '/../../lib/synergist_job.php';
 
-$userEmail = require_login();
+$userEmail = require_editor();
 $body = json_body();
 
 $title = trim((string) ($body['title'] ?? ''));

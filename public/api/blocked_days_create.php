@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 
-$userEmail = require_login();
+$userEmail = require_editor();
 $body = json_body();
 
 $day = (string) ($body['day'] ?? '');

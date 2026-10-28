@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 
-require_login();
+require_editor();
 
 $body = json_body();
 $name = trim((string) ($body['name'] ?? ''));

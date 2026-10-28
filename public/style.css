@@ -1680,3 +1680,18 @@ body.standalone-mode main {
 }
 .sl-print-section ul { margin: 0; padding-left: 1.2rem; }
 .sl-print-section li { font-size: 0.8rem; line-height: 1.55; }
+
+
+/* View only (everyone but Matt, Kate, Louis and Greg): the ways to add or
+   change are hidden, and the server refuses them anyway. */
+body.view-only #addBookingBtn,
+body.view-only #viewAdminBtn,
+body.view-only #deleteBookingBtn,
+body.view-only #confirmBookingBtn,
+body.view-only #unconfirmBookingBtn,
+body.view-only #emailConfirmationBtn,
+body.view-only form button[type="submit"] { display: none !important; }
+body.view-only form input, body.view-only form select, body.view-only form textarea { pointer-events: none; background: #f6f5f2; }
+body.view-only::before { content: 'View only — ask Matt, Kate, Louis or Greg to add or change bookings'; display: block; padding: 8px 16px; background: #fff6c7; color: #1f2430; font-size: 13px; text-align: center; }
+/* Inside the Ducknest: its own header does the job. */
+body.embedded #signOutBtn { display: none; }

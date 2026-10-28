@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/call_sheet_mailer.php';
 
-require_login();
+require_editor();
 
 $bookingId = (int) ($_GET['booking_id'] ?? 0);
 if ($bookingId <= 0) {
