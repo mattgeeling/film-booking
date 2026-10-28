@@ -1392,9 +1392,9 @@
     el.confirmBookingBtn.classList.add('hidden');
     el.unconfirmBookingBtn.classList.add('hidden');
     el.emailConfirmationBtn.classList.add('hidden');
-    el.openCallSheetBtn.classList.add('hidden');
-    el.openShotListBtn.classList.add('hidden');
-    el.openRiskAssessmentBtn.classList.add('hidden');
+    el.openCallSheetBtn.classList.remove('hidden');
+    el.openShotListBtn.classList.remove('hidden');
+    el.openRiskAssessmentBtn.classList.remove('hidden');
     el.formError.classList.add('hidden');
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
@@ -1494,10 +1494,44 @@
 
   async function onFormSubmit(e) {
     e.preventDefault();
+    try {
+      const data = await saveBookingForm();
+      closeModal();
+      await refreshBookings();
+      const failures = (data.sync_results || []).filter((r) => r.status === 'error');
+      if (failures.length) {
+        alert('Booking saved, but some calendar updates failed:\n' +
+          failures.map((r) => `${r.person}: ${r.error}`).join('\n'));
+      }
+    } catch (err) {
+      showFormError(err.message);
+    }
+  }
+
+  // Open a booking's call sheet, shot list or risk assessment from the form.
+  // A new booking is saved first (so the document is attached to it), then
+  // reopened as a saved booking with the document on top.
+  async function openBookingDoc(openDoc) {
+    if (state.editingBooking) { openDoc(state.editingBooking); return; }
+    if (!el.bookingForm.reportValidity()) return;
+    try {
+      const data = await saveBookingForm();
+      state.weekStart = mondayOf(new Date(el.fieldDate.value + 'T00:00:00'));
+      await refreshBookings();
+      const booking = findLoadedBooking(data.id);
+      if (!booking) { closeModal(); return; }
+      openEditModal(booking);
+      openDoc(booking);
+    } catch (err) {
+      showFormError(err.message);
+    }
+  }
+
+  // Saves the booking form (new or existing); throws with the reason if not.
+  async function saveBookingForm() {
     const attendeeIds = Array.from(el.fieldAttendees.selectedOptions).map((o) => Number(o.value));
     if (attendeeIds.length === 0) {
-      showFormError('Select at least one attendee.');
-      return;
+      throw new Error('Select at least one attendee.');
     }
     const payload = {
       title: el.fieldTitle.value.trim(),
@@ -1519,23 +1553,9 @@
     }
     payload.checklist_shot_list_na = el.fieldChecklistShotListNa.checked;
 
-    try {
-      let data;
-      if (state.editingId) {
-        data = await apiPost(`api/bookings_update.php?id=${state.editingId}`, payload);
-      } else {
-        data = await apiPost('api/bookings_create.php', payload);
-      }
-      closeModal();
-      await refreshBookings();
-      const failures = (data.sync_results || []).filter((r) => r.status === 'error');
-      if (failures.length) {
-        alert('Booking saved, but some calendar updates failed:\n' +
-          failures.map((r) => `${r.person}: ${r.error}`).join('\n'));
-      }
-    } catch (err) {
-      showFormError(err.message);
-    }
+    return state.editingId
+      ? apiPost(`api/bookings_update.php?id=${state.editingId}`, payload)
+      : apiPost('api/bookings_create.php', payload);
   }
 
   function showSyncResults(results) {
@@ -3568,7 +3588,7 @@
   el.cancelEmailPreviewBtn.addEventListener('click', closeEmailPreview);
   el.sendEmailPreviewBtn.addEventListener('click', onSendEmailPreviewClick);
   el.emailPreviewBackdrop.addEventListener('click', (e) => { if (e.target === el.emailPreviewBackdrop) closeEmailPreview(); });
-  el.openCallSheetBtn.addEventListener('click', () => { if (state.editingBooking) openCallSheet(state.editingBooking); });
+  el.openCallSheetBtn.addEventListener('click', () => openBookingDoc(openCallSheet));
   el.cancelCallSheetBtn.addEventListener('click', closeCallSheet);
   el.saveCallSheetBtn.addEventListener('click', saveCallSheet);
   el.printCallSheetBtn.addEventListener('click', onPrintCallSheetClick);
@@ -3590,14 +3610,14 @@
   el.csAddClientRow.addEventListener('click', () => buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, {}));
   el.csAddEquipmentRow.addEventListener('click', () => buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, {}));
   el.csAddScheduleRow.addEventListener('click', () => buildCallSheetFieldRow(el.csScheduleRows, CS_SCHEDULE_FIELDS, {}));
-  el.openShotListBtn.addEventListener('click', () => { if (state.editingBooking) openShotList(state.editingBooking); });
+  el.openShotListBtn.addEventListener('click', () => openBookingDoc(openShotList));
   el.cancelShotListBtn.addEventListener('click', closeShotList);
   el.saveShotListBtn.addEventListener('click', saveShotList);
   el.printShotListBtn.addEventListener('click', onPrintShotListClick);
   el.shotListBackdrop.addEventListener('click', (e) => { if (e.target === el.shotListBackdrop) closeShotList(); });
   el.slAddSection.addEventListener('click', () => buildShotListSection({}));
 
-  el.openRiskAssessmentBtn.addEventListener('click', () => { if (state.editingBooking) openRiskAssessment(state.editingBooking); });
+  el.openRiskAssessmentBtn.addEventListener('click', () => openBookingDoc(openRiskAssessment));
   el.cancelRiskAssessmentBtn.addEventListener('click', closeRiskAssessment);
   el.saveRiskAssessmentBtn.addEventListener('click', saveRiskAssessment);
 
