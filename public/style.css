@@ -1695,3 +1695,16 @@ body.view-only form input, body.view-only form select, body.view-only form texta
 body.view-only::before { content: 'View only — ask Matt, Kate, Louis or Greg to add or change bookings'; display: block; padding: 8px 16px; background: #fff6c7; color: #1f2430; font-size: 13px; text-align: center; }
 /* Inside the Ducknest: its own header does the job. */
 body.embedded #signOutBtn { display: none; }
+
+/* Download all paperwork: the editors load out of sight while it gathers */
+body.gathering-docs #callSheetBackdrop,
+body.gathering-docs #shotListBackdrop,
+body.gathering-docs #riskAssessmentBackdrop { visibility: hidden; }
+.doc-all-links-title { margin: 0 0 8px; font-size: 1.1rem; }
+.doc-all-links { margin: 0; padding-left: 18px; font-size: 0.85rem; word-break: break-all; }
+.doc-all-links li { margin-bottom: 6px; }
+@media print {
+  body.printing-all #shotListPrintArea:not(:empty),
+  body.printing-all #riskAssessmentPrintArea:not(:empty) { break-before: page; }
+  body.printing-all .doc-all-links-title { break-before: page; margin-top: 0; }
+}

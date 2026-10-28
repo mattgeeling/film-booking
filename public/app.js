@@ -98,6 +98,7 @@
     fieldChecklistAdditionalDocumentsUrlLink: document.getElementById('fieldChecklistAdditionalDocumentsUrlLink'),
     openAllDocsBtn: document.getElementById('openAllDocsBtn'),
     openAllDocsList: document.getElementById('openAllDocsList'),
+    downloadAllDocsBtn: document.getElementById('downloadAllDocsBtn'),
     formError: document.getElementById('formError'),
     cancelModalBtn: document.getElementById('cancelModalBtn'),
     deleteBookingBtn: document.getElementById('deleteBookingBtn'),
@@ -1293,6 +1294,51 @@
     el.openAllDocsList.classList.remove('hidden');
   }
 
+  // Download all paperwork: the call sheet, risk assessment and shot list
+  // (unless marked not required) in one print, each on its own page, plus a
+  // page listing any Drive links — saved as a single PDF from the print
+  // dialog. Each document is loaded into its editor out of sight, rendered as
+  // it prints on its own, then closed again.
+  async function downloadAllPaperwork() {
+    const booking = state.editingBooking;
+    if (!booking) return;
+    const btn = el.downloadAllDocsBtn;
+    const label = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Gathering paperwork…';
+    document.body.classList.add('gathering-docs');
+    try {
+      await openCallSheet(booking);
+      const callSheet = renderCallSheetPrintHtml();
+      closeCallSheet();
+      await openRiskAssessment(booking);
+      const risk = renderRiskAssessmentPrintHtml();
+      closeRiskAssessment();
+      let shots = '';
+      if (!booking.checklist_shot_list_na) {
+        await openShotList(booking);
+        shots = renderShotListPrintHtml();
+        closeShotList();
+      }
+      const links = CHECKLIST_ITEMS
+        .map((item) => ({ label: item.label, url: booking['checklist_' + item.key + '_url'] }))
+        .filter((d) => d.url);
+      const linksHtml = links.length || booking.shoot_prep_folder_url
+        ? `<h2 class="doc-all-links-title">Attached documents — ${csEscapeHtml(booking.title)}</h2>
+          <ul class="doc-all-links">${booking.shoot_prep_folder_url ? `<li><strong>Shoot Prep folder:</strong> ${csEscapeHtml(booking.shoot_prep_folder_url)}</li>` : ''}
+          ${links.map((d) => `<li><strong>${csEscapeHtml(d.label)}:</strong> ${csEscapeHtml(d.url)}</li>`).join('')}</ul>`
+        : '';
+      document.body.classList.remove('gathering-docs');
+      triggerDocumentPrint(el.callSheetPrintArea, callSheet, [[el.shotListPrintArea, shots], [el.riskAssessmentPrintArea, risk + linksHtml]]);
+    } catch (err) {
+      showFormError(err.message);
+    } finally {
+      document.body.classList.remove('gathering-docs');
+      btn.disabled = false;
+      btn.innerHTML = label;
+    }
+  }
+
   let conflictCheckTimer = null;
   function scheduleConflictCheck() {
     clearTimeout(conflictCheckTimer);
@@ -1387,6 +1433,7 @@
     updateShotListNaState();
     el.openAllDocsBtn.classList.add('hidden');
     el.openAllDocsList.classList.add('hidden');
+    el.downloadAllDocsBtn.classList.add('hidden');
     el.fieldSkipCalendarSync.checked = false;
     el.deleteBookingBtn.classList.add('hidden');
     el.confirmBookingBtn.classList.add('hidden');
@@ -1396,6 +1443,7 @@
     el.openShotListBtn.classList.remove('hidden');
     el.openRiskAssessmentBtn.classList.remove('hidden');
     el.formError.classList.add('hidden');
+    document.querySelectorAll('.doc-open-error').forEach((n) => n.remove());
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
     el.modalBackdrop.classList.remove('hidden');
@@ -1433,6 +1481,7 @@
     updateShotListNaState();
     const anyDocUrl = CHECKLIST_ITEMS.some((item) => booking['checklist_' + item.key + '_url']);
     el.openAllDocsBtn.classList.toggle('hidden', !anyDocUrl);
+    el.downloadAllDocsBtn.classList.remove('hidden');
     el.openAllDocsList.classList.add('hidden');
     el.fieldSkipCalendarSync.checked = !!booking.skip_calendar_sync;
     const attendeeIds = new Set(booking.attendees.map((a) => a.id));
@@ -1448,6 +1497,7 @@
     el.openShotListBtn.classList.remove('hidden');
     el.openRiskAssessmentBtn.classList.remove('hidden');
     el.formError.classList.add('hidden');
+    document.querySelectorAll('.doc-open-error').forEach((n) => n.remove());
     el.syncResults.classList.add('hidden');
     el.conflictWarning.classList.add('hidden');
     el.modalBackdrop.classList.remove('hidden');
@@ -1511,9 +1561,13 @@
   // Open a booking's call sheet, shot list or risk assessment from the form.
   // A new booking is saved first (so the document is attached to it), then
   // reopened as a saved booking with the document on top.
-  async function openBookingDoc(openDoc) {
+  async function openBookingDoc(openDoc, btn) {
     if (state.editingBooking) { openDoc(state.editingBooking); return; }
     if (!el.bookingForm.reportValidity()) return;
+    // Why it can't be saved yet, right under the button pressed (the form's
+    // own error line is at the bottom, out of sight).
+    const note = btn.parentElement.querySelector('.doc-open-error') || btn.insertAdjacentElement('afterend', Object.assign(document.createElement('p'), { className: 'doc-open-error form-error' }));
+    note.textContent = '';
     try {
       const data = await saveBookingForm();
       state.weekStart = mondayOf(new Date(el.fieldDate.value + 'T00:00:00'));
@@ -1523,6 +1577,7 @@
       openEditModal(booking);
       openDoc(booking);
     } catch (err) {
+      note.textContent = `Save the booking first — ${err.message}`;
       showFormError(err.message);
     }
   }
@@ -2352,19 +2407,23 @@
     `;
   }
 
-  function triggerDocumentPrint(printAreaEl, html) {
+  // others: more [printArea, html] pairs printed in the same go, each
+  // starting a new page (Download all paperwork).
+  function triggerDocumentPrint(printAreaEl, html, others = []) {
     el.callSheetPrintArea.innerHTML = '';
     el.shotListPrintArea.innerHTML = '';
     el.riskAssessmentPrintArea.innerHTML = '';
     printAreaEl.innerHTML = html;
+    for (const [area, more] of others) area.innerHTML = more;
 
     const styleTag = document.createElement('style');
     styleTag.textContent = '@page { size: portrait; margin: 12mm; }';
     document.head.appendChild(styleTag);
     document.body.classList.add('printing-document');
+    document.body.classList.toggle('printing-all', others.length > 0);
 
     const cleanup = () => {
-      document.body.classList.remove('printing-document');
+      document.body.classList.remove('printing-document', 'printing-all');
       styleTag.remove();
       window.removeEventListener('afterprint', cleanup);
     };
@@ -3570,6 +3629,7 @@
   }
   el.fieldChecklistShotListNa.addEventListener('change', updateShotListNaState);
   el.openAllDocsBtn.addEventListener('click', openAllAttachedDocuments);
+  el.downloadAllDocsBtn.addEventListener('click', downloadAllPaperwork);
   el.personForm.addEventListener('submit', onPersonFormSubmit);
 
   el.prevWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); loadWeek(); });
@@ -3588,7 +3648,7 @@
   el.cancelEmailPreviewBtn.addEventListener('click', closeEmailPreview);
   el.sendEmailPreviewBtn.addEventListener('click', onSendEmailPreviewClick);
   el.emailPreviewBackdrop.addEventListener('click', (e) => { if (e.target === el.emailPreviewBackdrop) closeEmailPreview(); });
-  el.openCallSheetBtn.addEventListener('click', () => openBookingDoc(openCallSheet));
+  el.openCallSheetBtn.addEventListener('click', () => openBookingDoc(openCallSheet, el.openCallSheetBtn));
   el.cancelCallSheetBtn.addEventListener('click', closeCallSheet);
   el.saveCallSheetBtn.addEventListener('click', saveCallSheet);
   el.printCallSheetBtn.addEventListener('click', onPrintCallSheetClick);
@@ -3610,14 +3670,14 @@
   el.csAddClientRow.addEventListener('click', () => buildCallSheetFieldRow(el.csClientRows, CS_PERSON_FIELDS, {}));
   el.csAddEquipmentRow.addEventListener('click', () => buildCallSheetFieldRow(el.csEquipmentRows, CS_EQUIPMENT_FIELDS, {}));
   el.csAddScheduleRow.addEventListener('click', () => buildCallSheetFieldRow(el.csScheduleRows, CS_SCHEDULE_FIELDS, {}));
-  el.openShotListBtn.addEventListener('click', () => openBookingDoc(openShotList));
+  el.openShotListBtn.addEventListener('click', () => openBookingDoc(openShotList, el.openShotListBtn));
   el.cancelShotListBtn.addEventListener('click', closeShotList);
   el.saveShotListBtn.addEventListener('click', saveShotList);
   el.printShotListBtn.addEventListener('click', onPrintShotListClick);
   el.shotListBackdrop.addEventListener('click', (e) => { if (e.target === el.shotListBackdrop) closeShotList(); });
   el.slAddSection.addEventListener('click', () => buildShotListSection({}));
 
-  el.openRiskAssessmentBtn.addEventListener('click', () => openBookingDoc(openRiskAssessment));
+  el.openRiskAssessmentBtn.addEventListener('click', () => openBookingDoc(openRiskAssessment, el.openRiskAssessmentBtn));
   el.cancelRiskAssessmentBtn.addEventListener('click', closeRiskAssessment);
   el.saveRiskAssessmentBtn.addEventListener('click', saveRiskAssessment);
 
