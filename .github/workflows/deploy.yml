@@ -39,7 +39,7 @@ jobs:
               ],
               'mail' => [
                   'from_email' => 'production@fuzzyduck.co.uk',
-                  'from_name' => 'Film Plan',
+                  'from_name' => 'Production Bookings',
               ],
               'base_url' => 'https://ducknest.co.uk/film-booking/public',
               'integration' => [

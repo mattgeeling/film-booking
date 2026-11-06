@@ -191,7 +191,7 @@ function render_confirmation_email_html(
                   <td style="vertical-align:middle;">
                     <img src="' . $e($logoUrl) . '" alt="Fuzzy Duck" height="32" style="display:block;border:0;">
                   </td>
-                  <td style="vertical-align:middle;text-align:right;font-weight:700;font-size:15px;color:#111111;">Film Plan</td>
+                  <td style="vertical-align:middle;text-align:right;font-weight:700;font-size:15px;color:#111111;">Production Bookings</td>
                 </tr>
               </table>
             </td>
@@ -212,7 +212,7 @@ function render_confirmation_email_html(
           </tr>
           <tr>
             <td style="background:#111111;padding:14px 24px;font-size:12px;color:#ffd300;text-align:center;">
-              This has also been added to your Google Calendar &middot; Film Plan &middot; Fuzzy Duck
+              This has also been added to your Google Calendar &middot; Production Bookings &middot; Fuzzy Duck
             </td>
           </tr>
         </table>

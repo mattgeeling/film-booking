@@ -41,7 +41,7 @@
 
   el.docTypeTitle.textContent = DOC_TYPES[docType].title;
   el.docTypeIntro.textContent = DOC_TYPES[docType].intro;
-  document.title = DOC_TYPES[docType].title + ' — Film Plan';
+  document.title = DOC_TYPES[docType].title + ' — Production Bookings';
 
   async function apiGet(path) {
     const res = await fetch(path, { credentials: 'include' });
