@@ -10,7 +10,7 @@
     { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet', required: true, hasNotRequired: true },
     { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment', required: true },
     { key: 'shot_list', elKey: 'ShotList', label: 'Shot List', required: true, hasNotRequired: true },
-    { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative', required: true },
+    { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative', required: false },
     { key: 'additional_documents', elKey: 'AdditionalDocuments', label: 'Additional documents', required: false },
   ];
 

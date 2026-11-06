@@ -5,7 +5,7 @@
     { key: 'call_sheet', label: 'Call Sheet', required: true },
     { key: 'risk_assessment', label: 'Risk Assessment', required: true },
     { key: 'shot_list', label: 'Shot List', required: true, hasNotRequired: true },
-    { key: 'preproduction_creative', label: 'Pre-production creative', required: true },
+    { key: 'preproduction_creative', label: 'Pre-production creative', required: false },
   ];
 
   function activeRequiredChecklistItems(booking) {

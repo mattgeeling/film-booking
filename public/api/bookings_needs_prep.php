@@ -22,7 +22,6 @@ $stmt = $pdo->query(
          b.checklist_call_sheet = 0
          OR b.checklist_risk_assessment = 0
          OR (b.checklist_shot_list = 0 AND b.checklist_shot_list_na = 0)
-         OR b.checklist_preproduction_creative = 0
          OR (b.checklist_risk_assessment = 1 AND (ra.signoff_director_date IS NULL OR (ra.signoff_producer_date IS NULL AND b.doc_type IS NULL)))
        )
      ORDER BY b.start_datetime ASC'
