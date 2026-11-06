@@ -1298,7 +1298,10 @@
   }
 
   function showKitForType() {
-    el.fieldKitSource.closest('label').classList.toggle('hidden', el.fieldBookingType.value === 'install');
+    const install = el.fieldBookingType.value === 'install';
+    el.fieldKitSource.closest('label').classList.toggle('hidden', install);
+    document.getElementById('fieldPrepFolderLabel').textContent = `${install ? 'Install' : 'Shoot'} Prep folder (Google Drive)`;
+    document.getElementById('fieldPrepFolderLinkText').textContent = `Open ${install ? 'Install' : 'Shoot'} Prep folder`;
   }
 
   function updateCallSheetNaState() {
@@ -1385,7 +1388,7 @@
         .filter((d) => d.url);
       const linksHtml = links.length || booking.shoot_prep_folder_url
         ? `<h2 class="doc-all-links-title">Attached documents — ${csEscapeHtml(booking.title)}</h2>
-          <ul class="doc-all-links">${booking.shoot_prep_folder_url ? `<li><strong>Shoot Prep folder:</strong> ${csEscapeHtml(booking.shoot_prep_folder_url)}</li>` : ''}
+          <ul class="doc-all-links">${booking.shoot_prep_folder_url ? `<li><strong>${booking.booking_type === 'install' ? 'Install' : 'Shoot'} Prep folder:</strong> ${csEscapeHtml(booking.shoot_prep_folder_url)}</li>` : ''}
           ${links.map((d) => `<li><strong>${csEscapeHtml(d.label)}:</strong> ${csEscapeHtml(d.url)}</li>`).join('')}</ul>`
         : '';
       document.body.classList.remove('gathering-docs');
