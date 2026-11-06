@@ -11,6 +11,12 @@ function booking_type_of(array $booking): string
 }
 
 /**
+ * A call sheet that isn't needed: ticked off, with this in place of who did
+ * it, so it counts as done everywhere a booking's paperwork is checked.
+ */
+const CALL_SHEET_NOT_REQUIRED = 'Not required';
+
+/**
  * Attaches attendees and normalizes types on a set of booking rows fetched
  * via the shared SELECT column list (see bookings_list.php / bookings_month_list.php).
  */
@@ -42,6 +48,7 @@ function hydrate_bookings(PDO $pdo, array $bookings): array
     foreach ($bookings as &$booking) {
         $booking['id'] = (int) $booking['id'];
         $booking['booking_type'] = booking_type_of($booking);
+        $booking['checklist_call_sheet_na'] = ($booking['checklist_call_sheet_by'] ?? null) === CALL_SHEET_NOT_REQUIRED;
         $booking['attendees'] = $attendeesByBooking[$booking['id']] ?? [];
         $booking['checklist_call_sheet'] = (bool) $booking['checklist_call_sheet'];
         $booking['checklist_risk_assessment'] = (bool) $booking['checklist_risk_assessment'];

@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
+require_once __DIR__ . '/../../lib/booking_query.php';
 require_once __DIR__ . '/../../lib/booking_sync.php';
 require_once __DIR__ . '/../../lib/synergist_job.php';
 
@@ -82,6 +83,16 @@ $shotListBy = checklist_by_value($checklistShotList, (bool) $booking['checklist_
 $preprodBy = checklist_by_value($checklistPreproductionCreative, (bool) $booking['checklist_preproduction_creative'], $booking['checklist_preproduction_creative_by'], $userName);
 $additionalDocumentsBy = checklist_by_value($checklistAdditionalDocuments, (bool) $booking['checklist_additional_documents'], $booking['checklist_additional_documents_by'], $userName);
 
+if (array_key_exists('checklist_call_sheet_na', $body)) {
+    if (!empty($body['checklist_call_sheet_na'])) {
+        $checklistCallSheet = true;
+        $callSheetBy = CALL_SHEET_NOT_REQUIRED;
+        $callSheetUrl = '';
+    } elseif ($callSheetBy === CALL_SHEET_NOT_REQUIRED) {
+        $callSheetBy = $userName; // it's needed after all, and ticked as done
+    }
+}
+
 function checklist_by_value(bool $newValue, bool $oldValue, ?string $existingBy, string $userName): ?string
 {
     if ($newValue === $oldValue) {
@@ -100,16 +111,17 @@ if (!$startDt || !$endDt) {
     json_error('Invalid start_datetime or end_datetime');
 }
 if ($endDt <= $startDt) {
-    json_error('end_datetime must be after start_datetime');
+    json_error('The end has to be after the start');
 }
 
 // Only block if the date is actually changing onto a blocked day — a
 // booking that already existed there before the block was added stays
 // editable.
 $originalDate = substr((string) $booking['start_datetime'], 0, 10);
-if ($startDt->format('Y-m-d') !== $originalDate) {
-    $blockedStmt = $pdo->prepare('SELECT reason FROM blocked_days WHERE day = ?');
-    $blockedStmt->execute([$startDt->format('Y-m-d')]);
+$originalEnd = substr((string) $booking['end_datetime'], 0, 10);
+if ($startDt->format('Y-m-d') !== $originalDate || $endDt->format('Y-m-d') !== $originalEnd) {
+    $blockedStmt = $pdo->prepare('SELECT reason FROM blocked_days WHERE day BETWEEN ? AND ?');
+    $blockedStmt->execute([$startDt->format('Y-m-d'), $endDt->format('Y-m-d')]);
     $blocked = $blockedStmt->fetchColumn();
     if ($blocked !== false) {
         json_error('This day is blocked for bookings: ' . ($blocked ?: 'no reason given'));

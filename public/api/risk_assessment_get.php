@@ -232,6 +232,7 @@ json_ok([
         'what3words' => $booking['what3words'],
         'client_name' => $booking['client_name'],
         'start_datetime' => $booking['start_datetime'],
+        'end_datetime' => $booking['end_datetime'],
     ],
     'client_name' => $ra['client_name'] ?? ($booking['client_name'] ?? ''),
     'location_contact' => $locationContact,

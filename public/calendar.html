@@ -205,10 +205,14 @@
           <datalist id="jobOptions"></datalist>
           <p class="field-hint" id="fieldJobHint">Puts confirmed shoots on Job Health's schedule against this job's Filming phase.</p>
 
-          <div class="field-row">
+          <div class="field-row" style="grid-template-columns:1fr 1fr">
             <label>
               Date
               <input type="date" id="fieldDate" required>
+            </label>
+            <label>
+              End date (if more than a day)
+              <input type="date" id="fieldEndDate">
             </label>
             <label>
               Start
@@ -280,6 +284,10 @@
               <input type="checkbox" id="fieldChecklistCallSheet">
               Call Sheet
               <span id="fieldChecklistCallSheetBy" class="checklist-by hidden"></span>
+            </label>
+            <label class="checklist-na-item">
+              <input type="checkbox" id="fieldChecklistCallSheetNa">
+              Not required
             </label>
             <div class="checklist-url-row hidden">
               <input type="url" id="fieldChecklistCallSheetUrl" placeholder="Drive link" class="checklist-url-input">
@@ -644,6 +652,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261106a"></script>
+  <script src="app.js?v=20261106d"></script>
 </body>
 </html>

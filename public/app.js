@@ -7,7 +7,7 @@
   const UNAVAILABLE_PERIOD_LABELS = { all_day: 'All day', am: 'AM', pm: 'PM' };
   const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const CHECKLIST_ITEMS = [
-    { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet', required: true },
+    { key: 'call_sheet', elKey: 'CallSheet', label: 'Call Sheet', required: true, hasNotRequired: true },
     { key: 'risk_assessment', elKey: 'RiskAssessment', label: 'Risk Assessment', required: true },
     { key: 'shot_list', elKey: 'ShotList', label: 'Shot List', required: true, hasNotRequired: true },
     { key: 'preproduction_creative', elKey: 'PreproductionCreative', label: 'Pre-production creative', required: true },
@@ -63,6 +63,7 @@
     fieldJobHint: document.getElementById('fieldJobHint'),
     jobOptions: document.getElementById('jobOptions'),
     fieldDate: document.getElementById('fieldDate'),
+    fieldEndDate: document.getElementById('fieldEndDate'),
     fieldStart: document.getElementById('fieldStart'),
     fieldEnd: document.getElementById('fieldEnd'),
     fieldLocation: document.getElementById('fieldLocation'),
@@ -80,6 +81,7 @@
     fieldChecklistRiskAssessment: document.getElementById('fieldChecklistRiskAssessment'),
     fieldChecklistShotList: document.getElementById('fieldChecklistShotList'),
     fieldChecklistShotListNa: document.getElementById('fieldChecklistShotListNa'),
+    fieldChecklistCallSheetNa: document.getElementById('fieldChecklistCallSheetNa'),
     fieldChecklistPreproductionCreative: document.getElementById('fieldChecklistPreproductionCreative'),
     fieldChecklistAdditionalDocuments: document.getElementById('fieldChecklistAdditionalDocuments'),
     fieldChecklistCallSheetBy: document.getElementById('fieldChecklistCallSheetBy'),
@@ -496,17 +498,46 @@
     return items;
   }
 
+  // Every day from one date to another, as YYYY-MM-DD.
+  function datesBetween(from, to) {
+    const dates = [];
+    const d = new Date(from + 'T00:00:00');
+    const last = new Date(to + 'T00:00:00');
+    while (d <= last && dates.length < 400) {
+      dates.push(isoDate(d));
+      d.setDate(d.getDate() + 1);
+    }
+    return dates;
+  }
+  function bookingDates(booking) {
+    return datesBetween(booking.start_datetime.slice(0, 10), booking.end_datetime.slice(0, 10));
+  }
+  // A booking over several days, one slot a day: its start to end time each
+  // day. If the end time isn't after the start time, the first day runs to
+  // midnight and the last from midnight.
+  function bookingDaySlots(booking) {
+    const dates = bookingDates(booking);
+    const startTime = booking.start_datetime.slice(11, 16);
+    const endTime = booking.end_datetime.slice(11, 16);
+    return dates.map((date, i) => {
+      const fits = endTime > startTime;
+      const from = fits || i === 0 ? startTime : '00:00';
+      const to = fits || i === dates.length - 1 ? endTime : '23:59';
+      return { start: new Date(`${date}T${from}`), end: new Date(`${date}T${to}`) };
+    });
+  }
+
   function renderBookings() {
     const columns = el.weekGrid.querySelectorAll('.day-column');
     columns.forEach((c) => { c.querySelectorAll('.booking-block').forEach((b) => b.remove()); });
 
     const byDay = [[], [], [], [], []];
     for (const booking of applyFilters(state.bookings)) {
-      const start = new Date(booking.start_datetime.replace(' ', 'T'));
-      const end = new Date(booking.end_datetime.replace(' ', 'T'));
-      const dayIndex = dayIndexFor(start);
-      if (dayIndex === null) continue;
-      byDay[dayIndex].push({ booking, start, end, startMs: start.getTime(), endMs: end.getTime() });
+      for (const { start, end } of bookingDaySlots(booking)) {
+        const dayIndex = dayIndexFor(start);
+        if (dayIndex === null) continue;
+        byDay[dayIndex].push({ booking, start, end, startMs: start.getTime(), endMs: end.getTime() });
+      }
     }
 
     for (let dayIndex = 0; dayIndex < 5; dayIndex++) {
@@ -565,6 +596,7 @@
     checklistHeader.textContent = 'Pre-production checklist';
     checklistEl.appendChild(checklistHeader);
     for (const item of CHECKLIST_ITEMS) {
+      if (item.hasNotRequired && booking['checklist_' + item.key + '_na']) continue;
       checklistEl.appendChild(buildBlockChecklistRow(booking, 'checklist_' + item.key, item.label));
     }
 
@@ -695,10 +727,9 @@
     const daysByPerson = {};
     for (const booking of state.bookings) {
       if (booking.status === 'cancelled') continue;
-      const dateStr = booking.start_datetime.slice(0, 10);
       for (const attendee of booking.attendees) {
         if (!daysByPerson[attendee.id]) daysByPerson[attendee.id] = new Set();
-        daysByPerson[attendee.id].add(dateStr);
+        for (const dateStr of bookingDates(booking)) daysByPerson[attendee.id].add(dateStr);
       }
     }
 
@@ -826,8 +857,9 @@
 
     const bookingsByDate = {};
     for (const booking of applyFilters(state.monthBookings)) {
-      const dateIso = booking.start_datetime.slice(0, 10);
-      (bookingsByDate[dateIso] = bookingsByDate[dateIso] || []).push(booking);
+      for (const dateIso of bookingDates(booking)) {
+        (bookingsByDate[dateIso] = bookingsByDate[dateIso] || []).push(booking);
+      }
     }
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1265,6 +1297,22 @@
     }
   }
 
+  function showKitForType() {
+    el.fieldKitSource.closest('label').classList.toggle('hidden', el.fieldBookingType.value === 'install');
+  }
+
+  function updateCallSheetNaState() {
+    const na = el.fieldChecklistCallSheetNa.checked;
+    if (na) {
+      el.fieldChecklistCallSheet.checked = false;
+      setChecklistBy(el.fieldChecklistCallSheetBy, null);
+    }
+    el.fieldChecklistCallSheet.disabled = na;
+    el.fieldChecklistCallSheetUrl.disabled = na;
+    el.fieldChecklistCallSheetUrl.value = na ? '' : el.fieldChecklistCallSheetUrl.value;
+    updateChecklistUrlLink(CHECKLIST_ITEMS.find((item) => item.key === 'call_sheet'));
+  }
+
   function updateShotListNaState() {
     const na = el.fieldChecklistShotListNa.checked;
     if (na) {
@@ -1317,9 +1365,12 @@
     btn.textContent = 'Gathering paperwork…';
     document.body.classList.add('gathering-docs');
     try {
-      await openCallSheet(booking);
-      const callSheet = renderCallSheetPrintHtml();
-      closeCallSheet();
+      let callSheet = '';
+      if (!booking.checklist_call_sheet_na) {
+        await openCallSheet(booking);
+        callSheet = renderCallSheetPrintHtml();
+        closeCallSheet();
+      }
       await openRiskAssessment(booking);
       const risk = renderRiskAssessmentPrintHtml();
       closeRiskAssessment();
@@ -1354,6 +1405,11 @@
     conflictCheckTimer = setTimeout(checkForConflicts, 350);
   }
 
+  // The End date box, or the booking's one date if that's empty.
+  function lastBookingDate() {
+    return el.fieldEndDate.value || el.fieldDate.value;
+  }
+
   async function checkForConflicts() {
     const attendeeIds = Array.from(el.fieldAttendees.selectedOptions).map((o) => Number(o.value));
     if (attendeeIds.length === 0 || !el.fieldDate.value || !el.fieldStart.value || !el.fieldEnd.value) {
@@ -1362,7 +1418,7 @@
     }
     const payload = {
       start_datetime: `${el.fieldDate.value}T${el.fieldStart.value}`,
-      end_datetime: `${el.fieldDate.value}T${el.fieldEnd.value}`,
+      end_datetime: `${lastBookingDate()}T${el.fieldEnd.value}`,
       attendee_ids: attendeeIds,
       exclude_booking_id: state.editingId,
     };
@@ -1372,9 +1428,11 @@
     } catch (err) {
       return; // silent — this is a convenience check, not critical path
     }
-    const unavailable = unavailableEntriesForDate(el.fieldDate.value)
+    const days = datesBetween(el.fieldDate.value, lastBookingDate());
+    const unavailable = days.flatMap((date) => unavailableEntriesForDate(date)
       .filter((u) => attendeeIds.includes(u.person_id) &&
-        unavailabilityOverlapsTime(u.period, el.fieldStart.value, el.fieldEnd.value));
+        unavailabilityOverlapsTime(u.period, el.fieldStart.value, el.fieldEnd.value))
+      .map((u) => ({ ...u, onDate: date })));
 
     if (!data.conflicts.length && !unavailable.length) {
       el.conflictWarning.classList.add('hidden');
@@ -1404,7 +1462,8 @@
       for (const u of unavailable) {
         const item = document.createElement('span');
         item.className = 'cw-item';
-        item.textContent = `${u.person_name} is unavailable ${periodPhrase[u.period]}${u.reason ? ': ' + u.reason : ''}`;
+        const onDay = days.length > 1 ? ` (${new Date(u.onDate + 'T00:00:00').toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })})` : '';
+        item.textContent = `${u.person_name} is unavailable ${periodPhrase[u.period]}${onDay}${u.reason ? ': ' + u.reason : ''}`;
         el.conflictWarning.appendChild(item);
       }
     }
@@ -1424,12 +1483,15 @@
     el.bookingForm.reset();
     el.fieldBookingType.value = 'film';
     el.fieldDate.value = isoDate(date);
+    el.fieldEndDate.value = '';
+    el.fieldEndDate.min = el.fieldDate.value;
     el.fieldStart.value = '09:00';
     el.fieldEnd.value = '17:00';
     el.fieldClient.value = '';
     el.fieldJobNumber.value = '';
     updateJobHint();
     el.fieldKitSource.value = 'fuzzy_duck';
+    showKitForType();
     updateLocationMapsLink();
     updateWhat3WordsLink();
     updateShootPrepFolderLink();
@@ -1441,6 +1503,8 @@
     }
     el.fieldChecklistShotListNa.checked = false;
     updateShotListNaState();
+    el.fieldChecklistCallSheetNa.checked = false;
+    updateCallSheetNaState();
     el.openAllDocsBtn.classList.add('hidden');
     el.openAllDocsList.classList.add('hidden');
     el.downloadAllDocsBtn.classList.add('hidden');
@@ -1468,6 +1532,8 @@
     const end = new Date(booking.end_datetime.replace(' ', 'T'));
     el.fieldTitle.value = booking.title;
     el.fieldDate.value = isoDate(start);
+    el.fieldEndDate.value = isoDate(end) !== isoDate(start) ? isoDate(end) : '';
+    el.fieldEndDate.min = el.fieldDate.value;
     el.fieldStart.value = pad2(start.getHours()) + ':' + pad2(start.getMinutes());
     el.fieldEnd.value = pad2(end.getHours()) + ':' + pad2(end.getMinutes());
     el.fieldLocation.value = booking.location || '';
@@ -1477,6 +1543,7 @@
     el.fieldJobNumber.value = booking.synergist_job_number ? String(Number(booking.synergist_job_number.split('/').pop())) : '';
     updateJobHint();
     el.fieldKitSource.value = booking.kit_source || 'fuzzy_duck';
+    showKitForType();
     updateLocationMapsLink();
     updateWhat3WordsLink();
     updateShootPrepFolderLink();
@@ -1490,6 +1557,8 @@
     }
     el.fieldChecklistShotListNa.checked = !!booking.checklist_shot_list_na;
     updateShotListNaState();
+    el.fieldChecklistCallSheetNa.checked = !!booking.checklist_call_sheet_na;
+    updateCallSheetNaState();
     const anyDocUrl = CHECKLIST_ITEMS.some((item) => booking['checklist_' + item.key + '_url']);
     el.openAllDocsBtn.classList.toggle('hidden', !anyDocUrl);
     el.downloadAllDocsBtn.classList.remove('hidden');
@@ -1601,6 +1670,9 @@
     if (attendeeIds.length === 0) {
       throw new Error('Select at least one attendee.');
     }
+    if (lastBookingDate() < el.fieldDate.value) {
+      throw new Error('The end date is before the start date.');
+    }
     const payload = {
       booking_type: el.fieldBookingType.value,
       title: el.fieldTitle.value.trim(),
@@ -1612,7 +1684,7 @@
       kit_source: el.fieldKitSource.value,
       notes: el.fieldNotes.value.trim(),
       start_datetime: `${el.fieldDate.value}T${el.fieldStart.value}`,
-      end_datetime: `${el.fieldDate.value}T${el.fieldEnd.value}`,
+      end_datetime: `${lastBookingDate()}T${el.fieldEnd.value}`,
       attendee_ids: attendeeIds,
       skip_calendar_sync: el.fieldSkipCalendarSync.checked,
     };
@@ -1621,6 +1693,7 @@
       payload['checklist_' + item.key + '_url'] = el['fieldChecklist' + item.elKey + 'Url'].value.trim();
     }
     payload.checklist_shot_list_na = el.fieldChecklistShotListNa.checked;
+    payload.checklist_call_sheet_na = el.fieldChecklistCallSheetNa.checked;
 
     return state.editingId
       ? apiPost(`api/bookings_update.php?id=${state.editingId}`, payload)
@@ -2913,7 +2986,7 @@
       <div class="doc-print-masthead">
         <div class="doc-print-masthead-text">
           <h1>INSTALLATION RISK ASSESSMENT</h1>
-          <p class="cs-day">${csEscapeHtml(booking.title)} — ${longDate(start)}</p>
+          <p class="cs-day">${csEscapeHtml(booking.title)} — ${longDate(start)}${(booking.end_datetime || '').slice(0, 10) > booking.start_datetime.slice(0, 10) ? ` to ${longDate(new Date(booking.end_datetime.replace(' ', 'T')))}` : ''}</p>
           ${lastSavedPrintHtml('riskAssessment')}
         </div>
         <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
@@ -3803,7 +3876,11 @@
   }
   el.fieldWhat3Words.addEventListener('input', updateWhat3WordsLink);
   el.fieldShootPrepFolderUrl.addEventListener('input', updateShootPrepFolderLink);
-  el.fieldDate.addEventListener('input', scheduleConflictCheck);
+  el.fieldDate.addEventListener('input', () => {
+    el.fieldEndDate.min = el.fieldDate.value;
+    scheduleConflictCheck();
+  });
+  el.fieldEndDate.addEventListener('input', scheduleConflictCheck);
   el.fieldStart.addEventListener('input', scheduleConflictCheck);
   el.fieldEnd.addEventListener('input', scheduleConflictCheck);
   el.fieldAttendees.addEventListener('change', scheduleConflictCheck);
@@ -3811,6 +3888,7 @@
     el['fieldChecklist' + item.elKey + 'Url'].addEventListener('input', () => updateChecklistUrlLink(item));
   }
   el.fieldChecklistShotListNa.addEventListener('change', updateShotListNaState);
+  el.fieldChecklistCallSheetNa.addEventListener('change', updateCallSheetNaState);
   el.openAllDocsBtn.addEventListener('click', openAllAttachedDocuments);
   el.downloadAllDocsBtn.addEventListener('click', downloadAllPaperwork);
   el.personForm.addEventListener('submit', onPersonFormSubmit);
@@ -3819,8 +3897,9 @@
   el.nextWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); loadWeek(); });
   el.todayBtn.addEventListener('click', () => { state.weekStart = mondayOf(new Date()); loadWeek(); });
   el.addBookingBtn.addEventListener('click', () => openAddModal(new Date()));
-  // An install has no shots to list.
+  // An install has no shots to list, and no kit.
   el.fieldBookingType.addEventListener('change', () => {
+    showKitForType();
     if (el.fieldBookingType.value === 'install' && !el.fieldChecklistShotList.checked) {
       el.fieldChecklistShotListNa.checked = true;
       updateShotListNaState();

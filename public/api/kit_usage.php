@@ -17,6 +17,7 @@ $stmt = db()->prepare(
      FROM bookings
      WHERE status != "cancelled"
        AND is_standalone_doc = 0
+       AND (doc_type IS NULL OR doc_type <> "install")
        AND start_datetime >= :start
        AND start_datetime < :end
      ORDER BY start_datetime ASC'
@@ -31,11 +32,13 @@ $counts = ['fuzzy_duck' => 0, 'mark' => 0, 'tom' => 0];
 $daysSeen = ['fuzzy_duck' => [], 'mark' => [], 'tom' => []];
 $entries = [];
 foreach ($rows as $row) {
-    $day = substr($row['start_datetime'], 0, 10);
     $kit = $row['kit_source'];
-    if (isset($daysSeen[$kit]) && !isset($daysSeen[$kit][$day])) {
-        $daysSeen[$kit][$day] = true;
-        $counts[$kit]++;
+    $last = substr($row['end_datetime'], 0, 10);
+    for ($day = substr($row['start_datetime'], 0, 10); $day <= $last; $day = date('Y-m-d', strtotime($day . ' +1 day'))) {
+        if (isset($daysSeen[$kit]) && !isset($daysSeen[$kit][$day])) {
+            $daysSeen[$kit][$day] = true;
+            $counts[$kit]++;
+        }
     }
     $entries[] = [
         'id' => (int) $row['id'],

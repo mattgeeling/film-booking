@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/booking_sync.php';
 require_once __DIR__ . '/../../lib/synergist_job.php';
+require_once __DIR__ . '/../../lib/booking_query.php';
 
 $userEmail = require_editor();
 $body = json_body();
@@ -48,6 +49,12 @@ $shotListBy = $checklistShotList ? $userName : null;
 $preprodBy = $checklistPreproductionCreative ? $userName : null;
 $additionalDocumentsBy = $checklistAdditionalDocuments ? $userName : null;
 
+if (!empty($body['checklist_call_sheet_na'])) {
+    $checklistCallSheet = true;
+    $callSheetBy = CALL_SHEET_NOT_REQUIRED;
+    $callSheetUrl = '';
+}
+
 if ($title === '') {
     json_error('Title is required');
 }
@@ -61,13 +68,13 @@ if (!$startDt || !$endDt) {
     json_error('Invalid start_datetime or end_datetime');
 }
 if ($endDt <= $startDt) {
-    json_error('end_datetime must be after start_datetime');
+    json_error('The end has to be after the start');
 }
 
 $pdo = db();
 
-$blockedStmt = $pdo->prepare('SELECT reason FROM blocked_days WHERE day = ?');
-$blockedStmt->execute([$startDt->format('Y-m-d')]);
+$blockedStmt = $pdo->prepare('SELECT reason FROM blocked_days WHERE day BETWEEN ? AND ?');
+$blockedStmt->execute([$startDt->format('Y-m-d'), $endDt->format('Y-m-d')]);
 $blocked = $blockedStmt->fetchColumn();
 if ($blocked !== false) {
     json_error('This day is blocked for bookings: ' . ($blocked ?: 'no reason given'));

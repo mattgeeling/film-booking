@@ -160,7 +160,7 @@ function render_confirmation_email_html(
           </tr>';
     };
 
-    $addDetail('When', $e($start->format('l j F Y')) . ' &middot; ' . $e($start->format('H:i')) . '&ndash;' . $e($end->format('H:i')));
+    $addDetail('When', $e($start->format('l j F Y')) . ($end->format('Y-m-d') !== $start->format('Y-m-d') ? ' &ndash; ' . $e($end->format('l j F Y')) : '') . ' &middot; ' . $e($start->format('H:i')) . '&ndash;' . $e($end->format('H:i')));
     if (!empty($booking['location'])) {
         $addDetail('Location', $e($booking['location']));
     }
