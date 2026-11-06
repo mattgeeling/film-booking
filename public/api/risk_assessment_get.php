@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
+require_once __DIR__ . '/../../lib/booking_query.php';
 
 require_login();
 
@@ -41,6 +42,76 @@ function ra_default_standard_arrangements(): array
         'heating_ventilation' => ['answer' => 'Yes', 'detail' => 'Crew working indoors in a heated/ventilated private space.'],
         'drinking_water' => ['answer' => 'Yes', 'detail' => 'Crew to carry refillable bottles.'],
         'washing_changing' => ['answer' => 'Yes', 'detail' => 'Toilets available on location.'],
+    ];
+}
+
+/** An install's arrangements: each with a control and a status, and when it was assessed. */
+function ra_install_standard_arrangements(): array
+{
+    return [
+        'kind' => 'install',
+        'assessment_date' => '',
+        'rows' => [
+            ['category' => 'Fire', 'control' => 'Venue contact to brief the installation team on alarms, fire exits and assembly points. Exits and escape routes must remain clear throughout the work.', 'status' => 'Confirm on arrival'],
+            ['category' => 'Emergency', 'control' => 'In an emergency, stop work, make equipment safe if this can be done without risk, evacuate by the nearest safe exit and follow venue procedures. Call 999 where required.', 'status' => 'In place'],
+            ['category' => 'First aid', 'control' => 'Venue first-aid arrangements and the location of the nearest first-aid kit/first aider to be confirmed on arrival.', 'status' => 'Confirm on arrival'],
+            ['category' => 'Welfare', 'control' => 'Toilets, drinking water and suitable rest breaks to be available to the installation team.', 'status' => 'Available'],
+        ],
+    ];
+}
+
+/** The hazards from the Eureka Selfie install, as a starting point. */
+function ra_install_hazards(): array
+{
+    return [
+        [
+            'hazard' => 'Electrical equipment / electric shock',
+            'to_whom' => 'Installation team, venue staff and visitors',
+            'level' => 'Low',
+            'precautions' => "Use only suitable, serviceable equipment and power supplies; visually inspect leads, plugs and adapters before use.\nDo not use damaged equipment. Isolate it immediately and report the defect.\nDo not overload sockets or daisy-chain extension leads. Keep connections dry and ventilated.\nPower down and isolate equipment before changing connections where practicable.\nAgree power points with the venue and keep power supplies accessible.",
+        ],
+        [
+            'hazard' => 'Trailing cables / slips and trips',
+            'to_whom' => 'Installation team, venue staff and visitors',
+            'level' => 'Low',
+            'precautions' => "Plan cable routes before work begins and keep routes away from doors, stairs, fire exits and public walkways.\nUse cable covers or securely tape temporary cables; neatly secure permanent cabling.\nKeep tools, packaging and equipment consolidated in a designated work area.\nMaintain good housekeeping and remove waste as work progresses.\nRestrict public access to the immediate work area where necessary.",
+        ],
+        [
+            'hazard' => 'Manual handling',
+            'to_whom' => 'Installation team',
+            'level' => 'Low',
+            'precautions' => "Assess weight, size, route and final position before lifting equipment.\nUse two people or suitable handling aids for awkward or heavy items.\nLift within individual capability using a stable stance and keeping the load close to the body.\nWear suitable footwear and keep the carrying route clear and well lit.\nDo not lift where an existing injury or condition makes the task unsafe.",
+        ],
+        [
+            'hazard' => 'Work at height / access equipment',
+            'to_whom' => 'Installation team and people nearby',
+            'level' => 'Low',
+            'precautions' => "Avoid work at height where possible. Use a suitable step ladder or podium - never chairs or improvised platforms.\nInspect access equipment before use and place it on firm, level ground.\nMaintain three points of contact; do not overreach. Reposition the access equipment instead.\nA second person must control the area and assist where appropriate.\nDo not work above members of the public; keep the area below clear.",
+        ],
+        [
+            'hazard' => 'Hand tools and installation work',
+            'to_whom' => 'Installation team and people nearby',
+            'level' => 'Low',
+            'precautions' => "Use the correct tool for the task and inspect tools before use.\nKeep hands clear of cutting and fixing points; wear appropriate eye or hand protection where required.\nDo not leave tools unattended or accessible to visitors.\nConfirm the location of concealed services before drilling or fixing into any surface.\nStop work if the mounting surface, fixings or equipment position is unsuitable.",
+        ],
+        [
+            'hazard' => 'Public access / occupied venue',
+            'to_whom' => 'Visitors, venue staff and installation team',
+            'level' => 'Low',
+            'precautions' => "Coordinate work with the venue and, where possible, complete disruptive work outside public opening hours.\nUse barriers or a controlled work zone around tools, open equipment and cable routes.\nMaintain clear emergency access and follow all instructions from the venue contact.\nPause work if members of the public enter the controlled area or conditions become unsafe.",
+        ],
+        [
+            'hazard' => 'Equipment positioning and ventilation',
+            'to_whom' => 'Installation team, venue staff and visitors',
+            'level' => 'Low',
+            'precautions' => "Position PCs, switches and adapters on stable surfaces or secure them using suitable fixings.\nKeep ventilation openings clear and allow adequate airflow around powered equipment.\nKeep equipment away from water, heat sources and areas where it could be knocked or interfered with.\nSecure loose adapters and power supplies to prevent strain on sockets and connectors.",
+        ],
+        [
+            'hazard' => 'Network, image and system data',
+            'to_whom' => 'Client, venue and visitors',
+            'level' => 'Low',
+            'precautions' => "Use the local network only for the intended installation and do not connect unapproved devices.\nKeep system credentials and configuration information secure.\nUse test images during commissioning wherever possible and remove them after testing.\nConfirm the live system's photo retention and deletion behaviour with the client before handover.",
+        ],
     ];
 }
 
@@ -110,8 +181,14 @@ function ra_default_hazards(): array
     ];
 }
 
-$standardArrangements = ($ra && $ra['standard_arrangements']) ? json_decode($ra['standard_arrangements'], true) : ra_default_standard_arrangements();
-$hazards = ($ra && $ra['hazards']) ? json_decode($ra['hazards'], true) : ra_default_hazards();
+// A booking changed between film and install: what's saved is the other kind,
+// so show that kind's defaults. Nothing's overwritten until it's saved.
+$bookingType = booking_type_of($booking);
+$isInstall = $bookingType === 'install';
+$savedStandard = ($ra && $ra['standard_arrangements']) ? json_decode($ra['standard_arrangements'], true) : null;
+$useSaved = $savedStandard !== null && isset($savedStandard['rows']) === $isInstall;
+$standardArrangements = $useSaved ? $savedStandard : ($isInstall ? ra_install_standard_arrangements() : ra_default_standard_arrangements());
+$hazards = ($useSaved && $ra['hazards']) ? json_decode($ra['hazards'], true) : ($isInstall ? ra_install_hazards() : ra_default_hazards());
 
 $locationContact = $ra['location_contact'] ?? '';
 if ($locationContact === '' && $callSheet) {
@@ -123,6 +200,12 @@ if ($nearestAe === '' && $callSheet) {
 }
 
 $crewExperts = $ra['crew_experts'] ?? '';
+// An install's team starts as the people on the booking.
+if ($crewExperts === '' && $isInstall) {
+    $peopleStmt = $pdo->prepare('SELECT p.name, p.role FROM booking_people bp JOIN people p ON p.id = bp.person_id WHERE bp.booking_id = ? ORDER BY p.name');
+    $peopleStmt->execute([$bookingId]);
+    $crewExperts = implode("\n", array_map(fn($p) => $p['role'] ? $p['name'] . ' - ' . $p['role'] : $p['name'], $peopleStmt->fetchAll()));
+}
 if ($crewExperts === '' && $callSheet && $callSheet['production_crew']) {
     $crew = json_decode($callSheet['production_crew'], true) ?: [];
     $crewExperts = implode("\n", array_filter(array_map(function ($row) {
@@ -143,6 +226,7 @@ if ($crewExperts === '' && (int) $booking['is_standalone_doc'] === 1) {
 json_ok([
     'booking' => [
         'id' => (int) $booking['id'],
+        'booking_type' => $bookingType,
         'title' => $booking['title'],
         'location' => $booking['location'],
         'what3words' => $booking['what3words'],

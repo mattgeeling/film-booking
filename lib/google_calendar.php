@@ -115,7 +115,7 @@ final class GoogleCalendarService
         $isPencil = ($booking['status'] ?? 'confirmed') === 'pencil';
 
         return [
-            'summary' => 'FUZZY DUCK FILMING' . ($isPencil ? ' (PENCIL)' : '') . ': ' . $booking['title'],
+            'summary' => (in_array($booking['doc_type'] ?? null, ['install', 'install_ra'], true) ? 'FUZZY DUCK INSTALL' : 'FUZZY DUCK FILMING') . ($isPencil ? ' (PENCIL)' : '') . ': ' . $booking['title'],
             'location' => $booking['location'] ?? '',
             'description' => $description,
             'status' => $isPencil ? 'tentative' : 'confirmed',

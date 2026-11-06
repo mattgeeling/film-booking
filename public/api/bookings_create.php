@@ -36,6 +36,7 @@ $shotListUrl = trim((string) ($body['checklist_shot_list_url'] ?? ''));
 $preprodUrl = trim((string) ($body['checklist_preproduction_creative_url'] ?? ''));
 $additionalDocumentsUrl = trim((string) ($body['checklist_additional_documents_url'] ?? ''));
 $skipCalendarSync = !empty($body['skip_calendar_sync']);
+$docType = ($body['booking_type'] ?? '') === 'install' ? 'install' : null;
 $kitSource = (string) ($body['kit_source'] ?? 'fuzzy_duck');
 if (!in_array($kitSource, ['fuzzy_duck', 'mark', 'tom'], true)) {
     $kitSource = 'fuzzy_duck';
@@ -97,12 +98,12 @@ try {
             checklist_shot_list, checklist_shot_list_by, checklist_shot_list_url, checklist_shot_list_na,
             checklist_preproduction_creative, checklist_preproduction_creative_by, checklist_preproduction_creative_url,
             checklist_additional_documents, checklist_additional_documents_by, checklist_additional_documents_url,
-            skip_calendar_sync, kit_source)
+            skip_calendar_sync, kit_source, doc_type)
          VALUES (:title, :location, :what3words, :shoot_prep_folder_url, :client_id, :synergist_job_number, :notes, :start, :end, "pencil", :created_by, :created_by_name,
             :call_sheet, :call_sheet_by, :call_sheet_url,
             :risk, :risk_by, :risk_url, :shot_list, :shot_list_by, :shot_list_url, :shot_list_na,
             :preprod, :preprod_by, :preprod_url,
-            :additional_docs, :additional_docs_by, :additional_docs_url, :skip_sync, :kit_source)'
+            :additional_docs, :additional_docs_by, :additional_docs_url, :skip_sync, :kit_source, :doc_type)'
     );
     $stmt->execute([
         'title' => $title,
@@ -117,6 +118,7 @@ try {
         'created_by_name' => $userName,
         'created_by' => $userEmail,
         'kit_source' => $kitSource,
+        'doc_type' => $docType,
         'call_sheet' => (int) $checklistCallSheet,
         'call_sheet_by' => $callSheetBy,
         'call_sheet_url' => $callSheetUrl ?: null,

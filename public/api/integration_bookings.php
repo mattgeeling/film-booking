@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../../lib/bootstrap.php';
 require_once __DIR__ . '/../../lib/synergist_job.php';
+require_once __DIR__ . '/../../lib/booking_query.php';
 
 if (!integration_key_ok()) {
     json_error('Not allowed', 403);
@@ -20,7 +21,7 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d
 
 $pdo = db();
 $stmt = $pdo->prepare(
-    "SELECT b.id, b.title, b.status, b.synergist_job_number, b.start_datetime, b.end_datetime, c.name AS client_name
+    "SELECT b.id, b.title, b.status, b.doc_type, b.synergist_job_number, b.start_datetime, b.end_datetime, c.name AS client_name
      FROM bookings b LEFT JOIN clients c ON c.id = b.client_id
      WHERE b.is_standalone_doc = 0 AND b.status IN ('pencil', 'confirmed')
        AND b.start_datetime < DATE_ADD(?, INTERVAL 1 DAY) AND b.end_datetime >= ?
@@ -45,6 +46,7 @@ json_ok(array_map(fn($b) => [
     'id' => (int) $b['id'],
     'title' => $b['title'],
     'status' => $b['status'],
+    'type' => booking_type_of($b),
     'job_number' => $b['synergist_job_number'],
     'client_name' => $b['client_name'],
     'start' => $b['start_datetime'],

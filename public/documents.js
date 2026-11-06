@@ -21,6 +21,7 @@
     newDocTitle: document.getElementById('newDocTitle'),
     newDocDate: document.getElementById('newDocDate'),
     newDocLocation: document.getElementById('newDocLocation'),
+    newDocKind: document.getElementById('newDocKind'),
     newDocError: document.getElementById('newDocError'),
     docsTableBody: document.getElementById('docsTableBody'),
     docsEmpty: document.getElementById('docsEmpty'),
@@ -35,6 +36,7 @@
 
   if (docType === 'risk_assessment') {
     el.newDocLocation.classList.add('hidden');
+    el.newDocKind.classList.remove('hidden');
   }
 
   el.docTypeTitle.textContent = DOC_TYPES[docType].title;
@@ -90,7 +92,7 @@
     for (const doc of docs) {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td>${escapeHtml(doc.title)}</td>
+        <td>${doc.doc_type === 'install_ra' ? '🔧 ' : ''}${escapeHtml(doc.title)}</td>
         <td>${escapeHtml(formatDate(doc.start_datetime))}</td>
         <td>${escapeHtml(doc.location || '')}</td>
         <td>${escapeHtml(doc.created_by_name || '')}</td>
@@ -145,6 +147,7 @@
     try {
       const data = await apiPost('api/standalone_doc_create.php', {
         doc_type: docType,
+        booking_type: el.newDocKind.value,
         title: el.newDocTitle.value.trim(),
         date: el.newDocDate.value,
         location: el.newDocLocation.value.trim(),

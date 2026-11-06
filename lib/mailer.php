@@ -200,7 +200,7 @@ function render_confirmation_email_html(
             <td style="padding:28px 24px 8px;">
               <span style="display:inline-block;background:#dcf5e3;color:#1f6b3a;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:3px 9px;border-radius:999px;">' . $e($statusLabel) . '</span>
               <h1 style="margin:12px 0 4px;font-size:20px;color:#111111;">' . $e($booking['title']) . '</h1>
-              <p style="margin:0 0 16px;font-size:14px;color:#1f2430;">Hi ' . $e($attendeeName) . ', this shoot has been confirmed.</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#1f2430;">Hi ' . $e($attendeeName) . ', this ' . (($booking['doc_type'] ?? null) === 'install' ? 'install' : 'shoot') . ' has been confirmed.</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $detailRows . '</table>
             </td>
           </tr>

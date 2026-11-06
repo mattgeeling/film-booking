@@ -42,6 +42,7 @@
       <form id="newDocForm" class="documents-new-form">
         <input type="text" id="newDocTitle" placeholder="Fuzzy Duck job number (e.g. FD101)" required>
         <input type="date" id="newDocDate" required>
+        <select id="newDocKind" class="hidden" aria-label="Film or install"><option value="film">Film</option><option value="install">Install</option></select>
         <input type="text" id="newDocLocation" placeholder="Location (used for the weather forecast — enter a real address or postcode)">
         <button type="submit" class="primary">+ New document</button>
       </form>
@@ -63,6 +64,6 @@
     </main>
   </div>
 
-  <script src="documents.js?v=20261015a"></script>
+  <script src="documents.js?v=20261106a"></script>
 </body>
 </html>

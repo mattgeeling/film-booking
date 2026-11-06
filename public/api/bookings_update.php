@@ -72,6 +72,9 @@ if (!in_array($kitSource, ['fuzzy_duck', 'mark', 'tom'], true)) {
     $kitSource = $booking['kit_source'];
 }
 
+$docType = array_key_exists('booking_type', $body)
+    ? ($body['booking_type'] === 'install' ? 'install' : null) : $booking['doc_type'];
+
 $userName = current_user_name() ?: $userEmail;
 $callSheetBy = checklist_by_value($checklistCallSheet, (bool) $booking['checklist_call_sheet'], $booking['checklist_call_sheet_by'], $userName);
 $riskBy = checklist_by_value($checklistRiskAssessment, (bool) $booking['checklist_risk_assessment'], $booking['checklist_risk_assessment_by'], $userName);
@@ -137,7 +140,7 @@ if ($clientId !== null) {
 $pdo->beginTransaction();
 try {
     $stmt = $pdo->prepare(
-        'UPDATE bookings SET title = :title, location = :location, what3words = :what3words,
+        'UPDATE bookings SET title = :title, doc_type = :doc_type, location = :location, what3words = :what3words,
          shoot_prep_folder_url = :shoot_prep_folder_url,
          client_id = :client_id, synergist_job_number = :synergist_job_number, notes = :notes,
          start_datetime = :start, end_datetime = :end,
@@ -151,6 +154,7 @@ try {
     );
     $stmt->execute([
         'title' => $title,
+        'doc_type' => $docType,
         'location' => $location ?: null,
         'what3words' => $what3words ?: null,
         'shoot_prep_folder_url' => $shootPrepFolderUrl ?: null,

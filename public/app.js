@@ -56,6 +56,7 @@
     printHeader: document.getElementById('printHeader'),
     modalBackdrop: document.getElementById('modalBackdrop'),
     bookingForm: document.getElementById('bookingForm'),
+    fieldBookingType: document.getElementById('fieldBookingType'),
     modalTitle: document.getElementById('modalTitle'),
     fieldTitle: document.getElementById('fieldTitle'),
     fieldJobNumber: document.getElementById('fieldJobNumber'),
@@ -178,6 +179,14 @@
     raShootDate: document.getElementById('raShootDate'),
     raLocation: document.getElementById('raLocation'),
     raWhat3Words: document.getElementById('raWhat3Words'),
+    raHeading: document.getElementById('raHeading'),
+    raShootDateLabel: document.getElementById('raShootDateLabel'),
+    raLeadLabel: document.getElementById('raLeadLabel'),
+    raAssessmentDate: document.getElementById('raAssessmentDate'),
+    raCrewHeading: document.getElementById('raCrewHeading'),
+    raHazardsHeading: document.getElementById('raHazardsHeading'),
+    raSignoffLeadLabel: document.getElementById('raSignoffLeadLabel'),
+    raSignoffSecondLabel: document.getElementById('raSignoffSecondLabel'),
     raTemplateSelect: document.getElementById('raTemplateSelect'),
     raLoadTemplateBtn: document.getElementById('raLoadTemplateBtn'),
     raDeleteTemplateBtn: document.getElementById('raDeleteTemplateBtn'),
@@ -527,7 +536,7 @@
 
     const titleEl = document.createElement('span');
     titleEl.className = 'b-title';
-    titleEl.textContent = booking.title;
+    titleEl.textContent = (booking.booking_type === 'install' ? '🔧 ' : '') + booking.title;
 
     const metaEl = document.createElement('span');
     metaEl.className = 'b-meta';
@@ -871,7 +880,7 @@
       for (const booking of (bookingsByDate[dateIso] || [])) {
         const pill = document.createElement('div');
         pill.className = `month-pill status-${booking.status}`;
-        pill.textContent = booking.title;
+        pill.textContent = (booking.booking_type === 'install' ? '🔧 ' : '') + booking.title;
         pill.title = booking.title;
         pill.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(booking); });
         cell.appendChild(pill);
@@ -1411,8 +1420,9 @@
   function openAddModal(date) {
     state.editingId = null;
     state.editingBooking = null;
-    el.modalTitle.textContent = 'New booking';
+    el.modalTitle.textContent = 'New Film/Install booking';
     el.bookingForm.reset();
+    el.fieldBookingType.value = 'film';
     el.fieldDate.value = isoDate(date);
     el.fieldStart.value = '09:00';
     el.fieldEnd.value = '17:00';
@@ -1453,6 +1463,7 @@
     state.editingId = booking.id;
     state.editingBooking = booking;
     el.modalTitle.textContent = booking.title;
+    el.fieldBookingType.value = booking.booking_type || 'film';
     const start = new Date(booking.start_datetime.replace(' ', 'T'));
     const end = new Date(booking.end_datetime.replace(' ', 'T'));
     el.fieldTitle.value = booking.title;
@@ -1524,7 +1535,9 @@
     const n = el.fieldJobNumber.value.trim().split(' ')[0];
     const job = liveJobs.find((j) => String(Number(String(j.job_number).split('/').pop())) === n);
     el.fieldJobHint.textContent = !n
-      ? 'Puts confirmed shoots on Job Health\'s schedule against this job\'s Filming phase.'
+      ? (el.fieldBookingType.value === 'install'
+        ? 'Puts confirmed installs on Job Health\'s schedule against this job\'s Install phase, if it has one.'
+        : 'Puts confirmed shoots on Job Health\'s schedule against this job\'s Filming phase.')
       : job ? `✓ ${job.title}${job.client_name ? ` · ${job.client_name}` : ''}`
       : (/^\d+$/.test(n) ? 'Not a live job in Synergist — check the number' : 'Use the job number, e.g. 12422');
   }
@@ -1589,6 +1602,7 @@
       throw new Error('Select at least one attendee.');
     }
     const payload = {
+      booking_type: el.fieldBookingType.value,
       title: el.fieldTitle.value.trim(),
       location: el.fieldLocation.value.trim(),
       what3words: el.fieldWhat3Words.value.trim(),
@@ -2578,7 +2592,72 @@
     { key: 'level', placeholder: 'Level', flex: '0 0 60px' },
   ];
 
+  // An install risk assessment: same columns underneath, its own wording.
+  const RA_INSTALL_HAZARD_FIELDS = [
+    { key: 'hazard', placeholder: 'Hazard', flex: '0 0 160px' },
+    { key: 'to_whom', placeholder: 'Who may be affected', flex: '0 0 130px' },
+    { key: 'precautions', placeholder: 'Controls required (one per line)', type: 'textarea', flex: '1' },
+    { key: 'level', placeholder: 'Residual risk', flex: '0 0 90px' },
+  ];
+  const RA_INSTALL_STATUSES = ['Confirm on arrival', 'In place', 'Available', 'Recorded', 'N/A'];
+
+  function raIsInstall() {
+    return !!state.riskAssessmentBooking && state.riskAssessmentBooking.booking_type === 'install';
+  }
+  function raHazardFields() {
+    return raIsInstall() ? RA_INSTALL_HAZARD_FIELDS : RA_HAZARD_FIELDS;
+  }
+  function applyRaKind() {
+    const install = raIsInstall();
+    el.raHeading.textContent = install ? 'Installation risk assessment' : 'Risk assessment';
+    el.raShootDateLabel.textContent = install ? 'Date of install' : 'Date of shoot';
+    el.raLeadLabel.textContent = install ? 'Installation lead' : 'Director';
+    el.raCrewHeading.textContent = install ? 'Installation team' : 'Crew / experts engaged';
+    el.raHazardsHeading.innerHTML = install ? 'Hazards identified &amp; controls required' : 'Hazards identified &amp; precautions';
+    el.raSignoffLeadLabel.textContent = install ? 'Installation lead' : 'Director name';
+    el.raSignoffSecondLabel.textContent = install ? 'Venue representative' : 'Producer name';
+    el.raBriefDescription.placeholder = install ? 'What\'s being installed, and what the work involves...' : 'What\'s being filmed, and any key handling/access instructions...';
+    el.raCrewExperts.placeholder = install ? 'One per line, e.g. Matt Geeling - Operations Director' : 'One per line, e.g. Mark Kuczewski - Production Director / Camera Operator';
+    document.querySelectorAll('.ra-install-only').forEach((n) => n.classList.toggle('hidden', !install));
+    document.querySelectorAll('.ra-film-only').forEach((n) => n.classList.toggle('hidden', install));
+  }
+
+  function renderInstallArrangementsRows(data) {
+    el.raStandardRows.innerHTML = '';
+    for (const r of (data && data.rows) || []) {
+      const row = document.createElement('div');
+      row.className = 'ra-standard-row';
+      row.dataset.category = r.category;
+      row.style.gridTemplateColumns = '80px 170px 1fr';
+      const categoryEl = document.createElement('p');
+      categoryEl.className = 'ra-standard-question';
+      categoryEl.textContent = r.category;
+      const select = document.createElement('select');
+      select.className = 'ra-standard-answer';
+      for (const opt of new Set([...RA_INSTALL_STATUSES, r.status].filter(Boolean))) {
+        const optEl = document.createElement('option');
+        optEl.value = opt;
+        optEl.textContent = opt;
+        optEl.selected = opt === r.status;
+        select.appendChild(optEl);
+      }
+      const control = document.createElement('textarea');
+      control.className = 'ra-standard-detail';
+      control.rows = 3;
+      control.placeholder = 'Control / arrangement';
+      control.value = r.control || '';
+      row.appendChild(categoryEl);
+      row.appendChild(select);
+      row.appendChild(control);
+      el.raStandardRows.appendChild(row);
+    }
+  }
+
   function renderStandardArrangementsRows(data) {
+    if (raIsInstall()) {
+      renderInstallArrangementsRows(data);
+      return;
+    }
     el.raStandardRows.innerHTML = '';
     let lastCategory = null;
     for (const q of RA_STANDARD_QUESTIONS) {
@@ -2618,6 +2697,17 @@
   }
 
   function collectStandardArrangements() {
+    if (raIsInstall()) {
+      return {
+        kind: 'install',
+        assessment_date: el.raAssessmentDate.value,
+        rows: Array.from(el.raStandardRows.querySelectorAll('.ra-standard-row')).map((row) => ({
+          category: row.dataset.category,
+          control: row.querySelector('.ra-standard-detail').value.trim(),
+          status: row.querySelector('.ra-standard-answer').value,
+        })),
+      };
+    }
     const result = {};
     for (const row of el.raStandardRows.querySelectorAll('.ra-standard-row')) {
       result[row.dataset.key] = {
@@ -2639,10 +2729,12 @@
     el.raUseHospitalBtn.classList.add('hidden');
     el.riskAssessmentBackdrop.classList.remove('hidden');
     el.raTemplateNote.classList.add('hidden');
-    loadRaTemplateOptions();
     try {
       const data = await apiGet(`api/risk_assessment_get.php?booking_id=${booking.id}`);
       state.riskAssessmentBooking = data.booking;
+      applyRaKind();
+      loadRaTemplateOptions();
+      el.raAssessmentDate.value = (data.standard_arrangements && data.standard_arrangements.assessment_date) || new Date().toISOString().slice(0, 10);
       el.riskAssessmentTitle.textContent = data.booking.title;
       el.raShootDateRow.classList.toggle('hidden', !state.standaloneDocType);
       if (state.standaloneDocType) {
@@ -2670,7 +2762,7 @@
       renderStandardArrangementsRows(data.standard_arrangements);
 
       el.raHazardRows.innerHTML = '';
-      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, row);
+      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, raHazardFields(), row);
     } catch (err) {
       el.riskAssessmentError.textContent = err.message;
       el.riskAssessmentError.classList.remove('hidden');
@@ -2681,7 +2773,7 @@
     el.raTemplateSelect.innerHTML = '<option value="">— Select a template —</option>';
     try {
       const data = await apiGet('api/ra_templates_list.php');
-      for (const t of data.templates) {
+      for (const t of data.templates.filter((x) => !!x.install === raIsInstall())) {
         const opt = document.createElement('option');
         opt.value = t.id;
         opt.textContent = t.name;
@@ -2702,7 +2794,7 @@
       const data = await apiGet(`api/ra_template_get.php?id=${templateId}`);
       renderStandardArrangementsRows(data.standard_arrangements);
       el.raHazardRows.innerHTML = '';
-      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, row);
+      for (const row of data.hazards) buildCallSheetFieldRow(el.raHazardRows, raHazardFields(), row);
       el.raTemplateNote.textContent = `Loaded "${data.name}" — review before saving.`;
       el.raTemplateNote.classList.remove('hidden');
     } catch (err) {
@@ -2804,7 +2896,98 @@
     return `<span class="ra-signature">${csEscapeHtml(trimmed)}</span>`;
   }
 
+  function renderInstallRiskAssessmentPrintHtml() {
+    const booking = state.riskAssessmentBooking;
+    const start = new Date(booking.start_datetime.replace(' ', 'T'));
+    const longDate = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+    const signedOn = (v) => (v ? longDate(new Date(v + 'T00:00:00')) : '');
+    const assessed = el.raAssessmentDate.value;
+    const multiline = (v) => csEscapeHtml(v).replace(/\n/g, '<br>');
+    const standard = collectStandardArrangements().rows;
+    const hazards = collectCallSheetRows(el.raHazardRows, ['hazard', 'to_whom', 'precautions', 'level']);
+    const colours = { L: '#8fce7a', M: '#ffe066', H: '#f6a94a', E: '#e06666' };
+    const matrix = [
+      ['Almost certain', 'MHHEE'], ['Likely', 'MMHHE'], ['Possible', 'LMMHE'], ['Unlikely', 'LLMMH'], ['Rare', 'LLLMH'],
+    ];
+    return `
+      <div class="doc-print-masthead">
+        <div class="doc-print-masthead-text">
+          <h1>INSTALLATION RISK ASSESSMENT</h1>
+          <p class="cs-day">${csEscapeHtml(booking.title)} — ${longDate(start)}</p>
+          ${lastSavedPrintHtml('riskAssessment')}
+        </div>
+        <img class="doc-print-masthead-logo" src="fuzzy-duck-logo.png" alt="Fuzzy Duck">
+      </div>
+
+      <table class="cs-print-table ra-print-header-table">
+        <tbody>
+          <tr><td class="ra-header-label">Client</td><td>${csEscapeHtml(el.raClientName.value)}</td></tr>
+          <tr><td class="ra-header-label">Location</td><td>${csEscapeHtml(booking.location || '')}</td></tr>
+          <tr><td class="ra-header-label">Location contact</td><td>${csEscapeHtml(el.raLocationContact.value)}</td></tr>
+          <tr><td class="ra-header-label">Installation lead</td><td>${csEscapeHtml(el.raDirectorName.value)}</td></tr>
+          <tr><td class="ra-header-label">Installation team</td><td>${multiline(el.raCrewExperts.value)}</td></tr>
+          <tr><td class="ra-header-label">Assessment date</td><td>${signedOn(assessed)}</td></tr>
+        </tbody>
+      </table>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">BRIEF DESCRIPTION</div>
+        <div class="cs-print-box-body"><p>${multiline(el.raBriefDescription.value)}</p></div>
+      </div>
+
+      <div class="cs-print-box cs-print-box-breakable">
+        <div class="cs-print-box-title">FIRE, FIRST AID, EMERGENCY &amp; WELFARE ARRANGEMENTS</div>
+        <div class="cs-print-box-body">
+          <table class="cs-print-table ra-print-standard-table">
+            <thead><tr><th style="width:14%">Category</th><th>Control / arrangement</th><th style="width:14%">Status</th></tr></thead>
+            <tbody>${standard.map((r) => `
+              <tr><td>${csEscapeHtml(r.category)}</td><td>${multiline(r.control)}</td><td>${csEscapeHtml(r.status)}</td></tr>`).join('')}
+              <tr><td>Nearest A&amp;E</td><td>${multiline(el.raNearestAe.value)}</td><td>Recorded</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="cs-print-box cs-print-box-breakable" style="break-before:page;">
+        <div class="cs-print-box-title">HAZARDS IDENTIFIED / RISKS ARISING</div>
+        <div class="cs-print-box-body">${hazards.length ? `
+          <table class="cs-print-table ra-print-hazards-table">
+            <thead><tr><th style="width:18%">Hazard</th><th style="width:16%">Who may be affected</th><th>Controls required</th><th style="width:9%">Residual risk</th></tr></thead>
+            <tbody>${hazards.map((h) => `
+              <tr>
+                <td>${csEscapeHtml(h.hazard)}</td>
+                <td>${csEscapeHtml(h.to_whom)}</td>
+                <td><ul class="ra-precautions-list">${h.precautions.split('\n').map((p) => p.trim()).filter(Boolean).map((p) => `<li>${csEscapeHtml(p)}</li>`).join('')}</ul></td>
+                <td>${csEscapeHtml(h.level)}</td>
+              </tr>`).join('')}</tbody>
+          </table>` : '<p style="font-size:0.8rem;color:#777;">None added.</p>'}</div>
+      </div>
+
+      <div class="cs-print-box">
+        <div class="cs-print-box-title">RISK RATING MATRIX</div>
+        <div class="cs-print-box-body">
+          <table class="cs-print-table ra-print-matrix">
+            <thead><tr><th>Likelihood</th><th>Insignificant</th><th>Minor</th><th>Moderate</th><th>Major</th><th>Severe</th></tr></thead>
+            <tbody>${matrix.map(([label, cells]) => `<tr><td>${label}</td>${[...cells].map((c) => `<td style="background:${colours[c]};text-align:center;font-weight:700;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+          <p style="font-size:0.8rem;">L = Low &nbsp; M = Medium &nbsp; H = High &nbsp; E = Extreme</p>
+        </div>
+      </div>
+
+      <table class="cs-print-table ra-print-signoff-table">
+        <thead><tr><th style="width:34%">Installation lead</th><th style="width:42%">Signature</th><th>Date</th></tr></thead>
+        <tbody><tr><td>${csEscapeHtml(el.raSignoffDirectorName.value)}</td><td>${raSignatureHtml(el.raSignoffDirectorName.value)}</td><td>${signedOn(el.raSignoffDirectorDate.value)}</td></tr></tbody>
+      </table>
+      <table class="cs-print-table ra-print-signoff-table">
+        <thead><tr><th style="width:34%">Venue representative</th><th style="width:42%">Signature</th><th>Date</th></tr></thead>
+        <tbody><tr><td>${csEscapeHtml(el.raSignoffProducerName.value)}</td><td>${raSignatureHtml(el.raSignoffProducerName.value)}</td><td>${signedOn(el.raSignoffProducerDate.value)}</td></tr></tbody>
+      </table>
+      <p style="font-size:0.8rem;">This assessment must be reviewed if the scope, equipment, venue conditions or working arrangements change. All team members should stop work and report any condition they consider unsafe.</p>
+    `;
+  }
+
   function renderRiskAssessmentPrintHtml() {
+    if (raIsInstall()) return renderInstallRiskAssessmentPrintHtml();
     const booking = state.riskAssessmentBooking;
     const start = new Date(booking.start_datetime.replace(' ', 'T'));
     const dateLabel = start.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
@@ -3636,6 +3819,14 @@
   el.nextWeek.addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); loadWeek(); });
   el.todayBtn.addEventListener('click', () => { state.weekStart = mondayOf(new Date()); loadWeek(); });
   el.addBookingBtn.addEventListener('click', () => openAddModal(new Date()));
+  // An install has no shots to list.
+  el.fieldBookingType.addEventListener('change', () => {
+    if (el.fieldBookingType.value === 'install' && !el.fieldChecklistShotList.checked) {
+      el.fieldChecklistShotListNa.checked = true;
+      updateShotListNaState();
+    }
+    updateJobHint();
+  });
   el.downloadWeekBtn.addEventListener('click', () => window.print());
   el.cancelModalBtn.addEventListener('click', closeModal);
   el.modalBackdrop.addEventListener('click', (e) => { if (e.target === el.modalBackdrop) closeModal(); });
@@ -3689,7 +3880,7 @@
   el.raWhat3Words.addEventListener('input', () => { if (state.riskAssessmentBooking) state.riskAssessmentBooking.what3words = el.raWhat3Words.value.trim(); });
   el.printRiskAssessmentBtn.addEventListener('click', onPrintRiskAssessmentClick);
   el.riskAssessmentBackdrop.addEventListener('click', (e) => { if (e.target === el.riskAssessmentBackdrop) closeRiskAssessment(); });
-  el.raAddHazardRow.addEventListener('click', () => buildCallSheetFieldRow(el.raHazardRows, RA_HAZARD_FIELDS, {}));
+  el.raAddHazardRow.addEventListener('click', () => buildCallSheetFieldRow(el.raHazardRows, raHazardFields(), {}));
   el.raLoadTemplateBtn.addEventListener('click', onLoadRaTemplateClick);
   el.raSaveTemplateBtn.addEventListener('click', onSaveRaTemplateClick);
   el.raDeleteTemplateBtn.addEventListener('click', onDeleteRaTemplateClick);

@@ -1,6 +1,16 @@
 <?php
 
 /**
+ * Film or install. Kept in bookings.doc_type, which is otherwise empty on a
+ * calendar booking: NULL = film, 'install' = install. A standalone document
+ * keeps its own value there; 'install_ra' is an install risk assessment.
+ */
+function booking_type_of(array $booking): string
+{
+    return in_array($booking['doc_type'] ?? null, ['install', 'install_ra'], true) ? 'install' : 'film';
+}
+
+/**
  * Attaches attendees and normalizes types on a set of booking rows fetched
  * via the shared SELECT column list (see bookings_list.php / bookings_month_list.php).
  */
@@ -31,6 +41,7 @@ function hydrate_bookings(PDO $pdo, array $bookings): array
 
     foreach ($bookings as &$booking) {
         $booking['id'] = (int) $booking['id'];
+        $booking['booking_type'] = booking_type_of($booking);
         $booking['attendees'] = $attendeesByBooking[$booking['id']] ?? [];
         $booking['checklist_call_sheet'] = (bool) $booking['checklist_call_sheet'];
         $booking['checklist_risk_assessment'] = (bool) $booking['checklist_risk_assessment'];
@@ -53,4 +64,4 @@ const BOOKING_SELECT_COLUMNS = 'b.id, b.title, b.location, b.what3words, b.shoot
     b.checklist_preproduction_creative, b.checklist_preproduction_creative_by, b.checklist_preproduction_creative_url,
     b.checklist_additional_documents, b.checklist_additional_documents_by, b.checklist_additional_documents_url,
     b.skip_calendar_sync, b.kit_source, b.created_by_name, b.client_id, c.name AS client_name, c.logo_path AS client_logo_path,
-    b.synergist_job_number';
+    b.synergist_job_number, b.doc_type';

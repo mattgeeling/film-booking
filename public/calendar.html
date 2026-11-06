@@ -184,10 +184,15 @@
 
     <div id="modalBackdrop" class="modal-backdrop hidden">
     <form id="bookingForm" class="modal modal-wide">
-      <h2 id="modalTitle">New booking</h2>
+      <h2 id="modalTitle">New Film/Install booking</h2>
 
       <div class="modal-columns">
         <div class="modal-col">
+          <label>
+            Film or install
+            <select id="fieldBookingType"><option value="film">Film</option><option value="install">Install</option></select>
+          </label>
+
           <label>
             Title
             <input type="text" id="fieldTitle" required>
@@ -528,10 +533,10 @@
 
     <div id="riskAssessmentBackdrop" class="modal-backdrop hidden">
       <div class="modal modal-wide callsheet-modal">
-        <h2>Risk assessment — <span id="riskAssessmentTitle"></span></h2>
+        <h2><span id="raHeading">Risk assessment</span> — <span id="riskAssessmentTitle"></span></h2>
 
         <div id="raShootDateRow" class="standalone-fields hidden">
-          <label>Date of shoot
+          <label><span id="raShootDateLabel">Date of shoot</span>
             <input type="date" id="raShootDate">
           </label>
           <label>Location
@@ -559,13 +564,14 @@
           <div class="field-row">
             <label>Client <input type="text" id="raClientName"></label>
             <label>Location contact <input type="text" id="raLocationContact"></label>
+            <label class="ra-install-only">Assessment date <input type="date" id="raAssessmentDate"></label>
           </div>
           <div class="field-row">
-            <label>Director <input type="text" id="raDirectorName" placeholder="Name"></label>
-            <label>Email <input type="text" id="raDirectorEmail"></label>
-            <label>Mobile <input type="text" id="raDirectorMobile"></label>
+            <label><span id="raLeadLabel">Director</span> <input type="text" id="raDirectorName" placeholder="Name"></label>
+            <label class="ra-film-only">Email <input type="text" id="raDirectorEmail"></label>
+            <label class="ra-film-only">Mobile <input type="text" id="raDirectorMobile"></label>
           </div>
-          <div class="field-row">
+          <div class="field-row ra-film-only">
             <label>Production Manager <input type="text" id="raPmName" placeholder="Name"></label>
             <label>Email <input type="text" id="raPmEmail"></label>
             <label>Mobile <input type="text" id="raPmMobile"></label>
@@ -578,7 +584,7 @@
         </div>
 
         <div class="callsheet-section">
-          <h3>Crew / experts engaged</h3>
+          <h3 id="raCrewHeading">Crew / experts engaged</h3>
           <textarea id="raCrewExperts" rows="3" placeholder="One per line, e.g. Mark Kuczewski - Production Director / Camera Operator"></textarea>
         </div>
 
@@ -599,7 +605,7 @@
         </div>
 
         <div class="callsheet-section">
-          <h3>Hazards identified &amp; precautions</h3>
+          <h3 id="raHazardsHeading">Hazards identified &amp; precautions</h3>
           <div id="raHazardRows" class="callsheet-rows"></div>
           <button type="button" id="raAddHazardRow" class="secondary-link-btn">+ Add hazard</button>
         </div>
@@ -607,11 +613,11 @@
         <div class="callsheet-section">
           <h3>Sign-off</h3>
           <div class="field-row">
-            <label>Director name <input type="text" id="raSignoffDirectorName"></label>
+            <label><span id="raSignoffLeadLabel">Director name</span> <input type="text" id="raSignoffDirectorName"></label>
             <label>Date <input type="date" id="raSignoffDirectorDate"></label>
           </div>
           <div class="field-row">
-            <label>Producer name <input type="text" id="raSignoffProducerName"></label>
+            <label><span id="raSignoffSecondLabel">Producer name</span> <input type="text" id="raSignoffProducerName"></label>
             <label>Date <input type="date" id="raSignoffProducerDate"></label>
           </div>
         </div>
@@ -638,6 +644,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261029d"></script>
+  <script src="app.js?v=20261106a"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@ $location = trim((string) ($body['location'] ?? ''));
 $what3words = trim((string) ($body['what3words'] ?? ''));
 
 $userName = current_user_name() ?: $userEmail;
+$storedType = $docType === 'risk_assessment' && ($body['booking_type'] ?? '') === 'install' ? 'install_ra' : $docType;
 
 $pdo = db();
 $stmt = $pdo->prepare(
@@ -40,7 +41,7 @@ $stmt->execute([
     'what3words' => $what3words ?: null,
     'start' => $startDt->format('Y-m-d') . ' 09:00:00',
     'end' => $startDt->format('Y-m-d') . ' 17:00:00',
-    'doc_type' => $docType,
+    'doc_type' => $storedType,
     'created_by' => $userEmail,
     'created_by_name' => $userName,
 ]);

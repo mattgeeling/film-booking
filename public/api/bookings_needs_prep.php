@@ -10,7 +10,7 @@ $pdo = db();
 $stmt = $pdo->query(
     'SELECT ' . BOOKING_SELECT_COLUMNS . ',
         CASE WHEN b.checklist_risk_assessment = 1
-             AND (ra.signoff_director_date IS NULL OR ra.signoff_producer_date IS NULL)
+             AND (ra.signoff_director_date IS NULL OR (ra.signoff_producer_date IS NULL AND b.doc_type IS NULL))
              THEN 1 ELSE 0 END AS ra_unsigned
      FROM bookings b
      LEFT JOIN clients c ON c.id = b.client_id
@@ -23,7 +23,7 @@ $stmt = $pdo->query(
          OR b.checklist_risk_assessment = 0
          OR (b.checklist_shot_list = 0 AND b.checklist_shot_list_na = 0)
          OR b.checklist_preproduction_creative = 0
-         OR (b.checklist_risk_assessment = 1 AND (ra.signoff_director_date IS NULL OR ra.signoff_producer_date IS NULL))
+         OR (b.checklist_risk_assessment = 1 AND (ra.signoff_director_date IS NULL OR (ra.signoff_producer_date IS NULL AND b.doc_type IS NULL)))
        )
      ORDER BY b.start_datetime ASC'
 );
