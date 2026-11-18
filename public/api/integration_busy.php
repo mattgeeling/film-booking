@@ -1,8 +1,8 @@
 <?php
 
 // For Job Health's schedule: when people are busy in their Google Calendar
-// between two dates — times only, never titles (lib/google_calendar.php
-// busyTimes() says what's left out). No sign-in; instead the request must
+// between two dates, with each meeting's name ('Busy' if marked private) —
+// lib/google_calendar.php busyTimes() says what's left out. No sign-in; instead the request must
 // carry the key shared with Job Health (X-Integration-Key header).
 // GET ?from=YYYY-MM-DD&to=YYYY-MM-DD&emails=a@fuzzyduck.co.uk,b@fuzzyduck.co.uk
 

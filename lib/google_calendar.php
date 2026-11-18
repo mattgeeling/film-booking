@@ -132,13 +132,13 @@ final class GoogleCalendarService
 
     /**
      * For Job Health's schedule: when each person is busy between two dates
-     * (YYYY-MM-DD, inclusive), from their primary calendar. Times only, never
-     * titles. Left out: all-day events, ones marked "free", ones they've
+     * (YYYY-MM-DD, inclusive), from their primary calendar: times and the
+     * meeting's name ('Busy' for events marked private). Left out: all-day events, ones marked "free", ones they've
      * declined, cancelled ones, out-of-office and working-location entries,
      * and our own FUZZY DUCK FILMING / INSTALL events (already on the schedule).
      * Every calendar is read at once (curl_multi), so many people stay quick.
      *
-     * @return array email => ['busy' => [['start' => 'Y-m-d H:i', 'end' => 'Y-m-d H:i'], …], 'error' => ?string]
+     * @return array email => ['busy' => [['start' => 'Y-m-d H:i', 'end' => 'Y-m-d H:i', 'title' => string], …], 'error' => ?string]
      */
     public function busyTimes(array $emails, string $from, string $to): array
     {
@@ -175,7 +175,7 @@ final class GoogleCalendarService
         $query = http_build_query([
             'timeMin' => $timeMin, 'timeMax' => $timeMax, 'singleEvents' => 'true', 'orderBy' => 'startTime',
             'maxResults' => 2500, 'timeZone' => app_config()['timezone'],
-            'fields' => 'items(status,summary,transparency,eventType,start,end,attendees(self,responseStatus))',
+            'fields' => 'items(status,summary,visibility,transparency,eventType,start,end,attendees(self,responseStatus))',
         ]);
         $listReqs = [];
         foreach ($tokens as $email => $token) {
@@ -208,9 +208,12 @@ final class GoogleCalendarService
                 if ($declined) {
                     continue;
                 }
+                $private = in_array($ev['visibility'] ?? 'default', ['private', 'confidential'], true);
+                $title = trim((string) ($ev['summary'] ?? ''));
                 $busy[] = [
                     'start' => (new DateTime($ev['start']['dateTime']))->setTimezone($tz)->format('Y-m-d H:i'),
                     'end' => (new DateTime($ev['end']['dateTime']))->setTimezone($tz)->format('Y-m-d H:i'),
+                    'title' => $private || $title === '' ? 'Busy' : mb_substr($title, 0, 120),
                 ];
             }
             $out[$email] = ['busy' => $busy, 'error' => null];
