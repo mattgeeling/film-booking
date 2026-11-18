@@ -130,6 +130,148 @@ final class GoogleCalendarService
         ];
     }
 
+    /**
+     * For Job Health's schedule: when each person is busy between two dates
+     * (YYYY-MM-DD, inclusive), from their primary calendar. Times only, never
+     * titles. Left out: all-day events, ones marked "free", ones they've
+     * declined, cancelled ones, out-of-office and working-location entries,
+     * and our own FUZZY DUCK FILMING / INSTALL events (already on the schedule).
+     * Every calendar is read at once (curl_multi), so many people stay quick.
+     *
+     * @return array email => ['busy' => [['start' => 'Y-m-d H:i', 'end' => 'Y-m-d H:i'], …], 'error' => ?string]
+     */
+    public function busyTimes(array $emails, string $from, string $to): array
+    {
+        $out = [];
+        if ($this->dryRun) {
+            foreach ($emails as $email) {
+                $out[$email] = ['busy' => [], 'error' => null];
+            }
+            return $out;
+        }
+        $tz = new DateTimeZone(app_config()['timezone']);
+        $timeMin = (new DateTime($from . ' 00:00:00', $tz))->format(DATE_RFC3339);
+        $timeMax = (new DateTime($to . ' 23:59:59', $tz))->format(DATE_RFC3339);
+
+        // 1. A token for each person, all at once.
+        $tokenReqs = [];
+        foreach ($emails as $email) {
+            $tokenReqs[$email] = [self::TOKEN_URL, 'POST', http_build_query([
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $this->jwtFor($email),
+            ]), ['Content-Type: application/x-www-form-urlencoded']];
+        }
+        $tokens = [];
+        foreach ($this->curlMulti($tokenReqs) as $email => [$status, $body]) {
+            $data = json_decode((string) $body, true);
+            if ($status === 200 && isset($data['access_token'])) {
+                $tokens[$email] = $data['access_token'];
+            } else {
+                $out[$email] = ['busy' => [], 'error' => "Couldn't sign in to their calendar ({$status})"];
+            }
+        }
+
+        // 2. Their events, all at once.
+        $query = http_build_query([
+            'timeMin' => $timeMin, 'timeMax' => $timeMax, 'singleEvents' => 'true', 'orderBy' => 'startTime',
+            'maxResults' => 2500, 'timeZone' => app_config()['timezone'],
+            'fields' => 'items(status,summary,transparency,eventType,start,end,attendees(self,responseStatus))',
+        ]);
+        $listReqs = [];
+        foreach ($tokens as $email => $token) {
+            $listReqs[$email] = [self::API_BASE . '/calendar/v3/calendars/primary/events?' . $query, 'GET', null, ['Authorization: Bearer ' . $token]];
+        }
+        foreach ($this->curlMulti($listReqs) as $email => [$status, $body]) {
+            $data = json_decode((string) $body, true);
+            if ($status !== 200 || !is_array($data)) {
+                $out[$email] = ['busy' => [], 'error' => "Couldn't read their calendar ({$status})"];
+                continue;
+            }
+            $busy = [];
+            foreach ($data['items'] ?? [] as $ev) {
+                if (empty($ev['start']['dateTime']) || empty($ev['end']['dateTime'])) {
+                    continue; // all day
+                }
+                if (($ev['status'] ?? '') === 'cancelled' || ($ev['transparency'] ?? '') === 'transparent'
+                    || in_array($ev['eventType'] ?? 'default', ['outOfOffice', 'workingLocation'], true)) {
+                    continue;
+                }
+                if (preg_match('/^FUZZY DUCK (FILMING|INSTALL)/i', (string) ($ev['summary'] ?? ''))) {
+                    continue;
+                }
+                $declined = false;
+                foreach ($ev['attendees'] ?? [] as $a) {
+                    if (!empty($a['self']) && ($a['responseStatus'] ?? '') === 'declined') {
+                        $declined = true;
+                    }
+                }
+                if ($declined) {
+                    continue;
+                }
+                $busy[] = [
+                    'start' => (new DateTime($ev['start']['dateTime']))->setTimezone($tz)->format('Y-m-d H:i'),
+                    'end' => (new DateTime($ev['end']['dateTime']))->setTimezone($tz)->format('Y-m-d H:i'),
+                ];
+            }
+            $out[$email] = ['busy' => $busy, 'error' => null];
+        }
+        return $out;
+    }
+
+    /** Several requests at once: key => [url, method, body, headers] → key => [status, body]. */
+    private function curlMulti(array $requests): array
+    {
+        $mh = curl_multi_init();
+        $handles = [];
+        foreach ($requests as $key => [$url, $method, $body, $headers]) {
+            $ch = curl_init($url);
+            $opts = [CURLOPT_RETURNTRANSFER => true, CURLOPT_CUSTOMREQUEST => $method, CURLOPT_HTTPHEADER => $headers, CURLOPT_TIMEOUT => 20];
+            if ($body !== null) {
+                $opts[CURLOPT_POSTFIELDS] = $body;
+            }
+            curl_setopt_array($ch, $opts);
+            curl_multi_add_handle($mh, $ch);
+            $handles[$key] = $ch;
+        }
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($running) {
+                curl_multi_select($mh, 1.0);
+            }
+        } while ($running && $status === CURLM_OK);
+        $out = [];
+        foreach ($handles as $key => $ch) {
+            $out[$key] = [(int) curl_getinfo($ch, CURLINFO_HTTP_CODE), (string) curl_multi_getcontent($ch)];
+            curl_multi_remove_handle($mh, $ch);
+        }
+        curl_multi_close($mh);
+        return $out;
+    }
+
+    /** The signed request for a token acting as $subject. */
+    private function jwtFor(string $subject): string
+    {
+        $now = time();
+        $segments = [
+            $this->base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])),
+            $this->base64UrlEncode(json_encode([
+                'iss' => $this->credentials['client_email'],
+                'scope' => self::SCOPE,
+                'aud' => self::TOKEN_URL,
+                'iat' => $now,
+                'exp' => $now + 3600,
+                'sub' => $subject,
+            ])),
+        ];
+        $signature = '';
+        $signingInput = implode('.', $segments);
+        if (!openssl_sign($signingInput, $signature, $this->credentials['private_key'], 'sha256WithRSAEncryption')) {
+            throw new RuntimeException('Failed to sign JWT for Google service account');
+        }
+        $segments[] = $this->base64UrlEncode($signature);
+        return implode('.', $segments);
+    }
+
     private function accessTokenFor(string $subject): string
     {
         $cached = $this->tokenCache[$subject] ?? null;
